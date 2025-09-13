@@ -1,4 +1,3 @@
-```typescript
 import { NextRequest, NextResponse } from 'next/server';
 
 // Simple document ingestion endpoint
@@ -45,5 +44,4 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
-}
-```
+         }
