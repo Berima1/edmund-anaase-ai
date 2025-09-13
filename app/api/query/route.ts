@@ -1,4 +1,3 @@
-```typescript
 import { NextRequest, NextResponse } from 'next/server';
 
 // Types
@@ -232,7 +231,7 @@ class ReasoningEngine {
       answer += `Knowledge graph reveals: ${relationships.join('; ')}.`;
     }
 
-    return answer || "The Anaase reasoning engine has processed your query using vector search and knowledge graph traversal.";
+    return answer || "The Anaase reasoning engine has processed your query using vector search and knowledge h traversal.";
   }
 
   async query(question: string, options: Record<string, any> = {}): Promise<QueryResponse> {
@@ -317,4 +316,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-```
+
