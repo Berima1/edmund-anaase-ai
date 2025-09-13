@@ -1,4 +1,3 @@
-```markdown
 # 🧠 Edmund's Anaase AI - Real Reasoning Engine
 
 ## 🚀 Live Demo
@@ -61,4 +60,3 @@ POST /api/ingest
 - **Open Source**: Fully customizable reasoning engine
 
 Built with ❤️ by Edmund using cutting-edge AI reasoning techniques.
-```
