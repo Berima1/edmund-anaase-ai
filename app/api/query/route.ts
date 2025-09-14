@@ -107,7 +107,7 @@ function advancedEmbed(text: string): number[] {
   return [...normalizedChars, ...wordFeatures.slice(0, 10)]; // Limit feature size
 }
 
-// COMPREHENSIVE KNOWLEDGE BASE - 50+ Domains
+// COMPREHENSIVE KNOWLEDGE BASE - 50 Domains
 const comprehensiveKnowledgeBase = [
   // === ORIGINAL SPECIALIZED KNOWLEDGE ===
   {
@@ -1039,7 +1039,7 @@ export async function GET() {
     service: 'ultimate-deep-search-engine',
     version: '1.0.0',
     capabilities: {
-      knowledgeDomains: 50+,
+      knowledgeDomains: 50,
       searchAlgorithms: 5,
       reasoningDepth: 4,
       confidenceScoring: true,
