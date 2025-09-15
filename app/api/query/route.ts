@@ -183,6 +183,14 @@ class MultiDomainAggregator {
 
     return consolidated;
   }
+
+  // --- Public wrapper (fixes your error) ---
+  async handleQuery(query: string) {
+    const { categories } = await this.analyzeEnhancedQuery(query);
+    const apis = this.selectRelevantAPIs(categories);
+    const results = await this.queryAPIs(apis, query);
+    return this.consolidateData(query, results);
+  }
 }
 
 // --- Next.js API Route ---
@@ -194,10 +202,7 @@ export async function POST(req: Request) {
     }
 
     const aggregator = new MultiDomainAggregator();
-    const { categories } = await aggregator.analyzeEnhancedQuery(query);
-    const apis = aggregator.selectRelevantAPIs(categories);
-    const results = await aggregator.queryAPIs(apis, query);
-    const consolidated = await aggregator.consolidateData(query, results);
+    const consolidated = await aggregator.handleQuery(query);
 
     return NextResponse.json(consolidated);
   } catch (err: any) {
@@ -207,4 +212,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-                            }
+        }
