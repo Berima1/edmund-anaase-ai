@@ -1,7 +1,7 @@
-// app/api/query/route.ts - CORRECTED REAL BACKEND WITH LIVE DATA INTEGRATION
+// app/api/query/route.ts - ENHANCED BACKEND WITH MULTIPLE FREE APIs
 import { NextRequest, NextResponse } from 'next/server';
 
-// Enhanced Types for Real Backend Integration
+// [Previous interfaces remain the same...]
 interface Document {
   id: string;
   score: number;
@@ -67,64 +67,70 @@ interface ConsolidatedData {
   inferenceChains: string[];
 }
 
-// Real Data Integration System
-class RealBackendIntegration {
+// Enhanced Real Backend with Multiple Free APIs
+class EnhancedRealBackend {
+  // Existing APIs
   private wikipediaAPI = 'https://en.wikipedia.org/api/rest_v1';
   private newsAPI = process.env.NEWS_API_KEY ? 'https://newsapi.org/v2' : null;
-  private scholarAPI = 'https://serpapi.com/search';
-  private wolfram = process.env.WOLFRAM_API_KEY ? 'https://api.wolframalpha.com/v1' : null;
+  
+  // New Free APIs
+  private openLibraryAPI = 'https://openlibrary.org';
+  private countriesAPI = 'https://restcountries.com/v3.1';
+  private quotesAPI = 'https://api.quotable.io';
+  private numbersAPI = 'http://numbersapi.com';
+  private nasaAPI = 'https://api.nasa.gov';
+  private weatherAPI = 'https://api.openweathermap.org/data/2.5';
+  private githubAPI = 'https://api.github.com';
+  private coingeckoAPI = 'https://api.coingecko.com/api/v3';
+  private stackOverflowAPI = 'https://api.stackexchange.com/2.3';
+  private redditAPI = 'https://www.reddit.com/r';
 
   async query(question: string, options: Record<string, any> = {}): Promise<QueryResponse> {
     const startTime = Date.now();
     const trace: TraceItem[] = [];
 
-    // Step 1: Analyze query intent and extract key terms
+    // Step 1: Enhanced query analysis
     trace.push({
-      type: "query-analysis",
+      type: "enhanced-query-analysis",
       timestamp: new Date().toISOString(),
-      info: { question, method: "intent_extraction" }
+      info: { question, method: "multi_domain_analysis" }
     });
 
-    const queryAnalysis = this.analyzeQuery(question);
+    const queryAnalysis = this.analyzeEnhancedQuery(question);
     
-    // Step 2: Search multiple real data sources
-    const searchPromises = [
-      this.searchWikipedia(queryAnalysis.mainTopic),
-      this.searchNews(queryAnalysis.mainTopic),
-      this.searchAcademic(queryAnalysis.mainTopic),
-      this.searchWolfram(question)
-    ];
-
+    // Step 2: Dynamic API selection based on query type
+    const selectedAPIs = this.selectRelevantAPIs(queryAnalysis);
+    
     trace.push({
-      type: "multi-source-search",
+      type: "dynamic-api-selection",
       timestamp: new Date().toISOString(),
       info: { 
-        sources: ["wikipedia", "news", "academic", "wolfram"],
-        mainTopic: queryAnalysis.mainTopic
+        selectedAPIs,
+        queryType: queryAnalysis.category,
+        confidence: queryAnalysis.confidence
       }
     });
 
+    // Step 3: Parallel search across selected APIs
+    const searchPromises = this.createSearchPromises(queryAnalysis, selectedAPIs);
     const results = await Promise.allSettled(searchPromises);
-    const realData = this.consolidateResults(results);
+    const realData = this.consolidateEnhancedResults(results);
 
-    // Step 3: Generate comprehensive answer from real data
-    const answer = this.generateRealAnswer(question, queryAnalysis, realData);
-    
-    // Step 4: Extract related concepts from real data
-    const relatedConcepts = this.extractRelatedConcepts(realData);
-    
-    // Step 5: Generate follow-up questions based on real information
+    // Step 4: Generate comprehensive answer
+    const answer = this.generateEnhancedAnswer(question, queryAnalysis, realData);
+    const relatedConcepts = this.extractEnhancedConcepts(realData);
     const alternativeQuestions = this.generateSmartFollowUps(question, realData);
 
     const processingTime = Date.now() - startTime;
     trace.push({
-      type: "real-data-synthesis",
+      type: "enhanced-synthesis",
       timestamp: new Date().toISOString(),
       info: {
         processingTime: `${processingTime}ms`,
-        sourcesUsed: realData.sources,
+        apisUsed: selectedAPIs,
         dataPoints: realData.totalResults,
-        confidenceScore: realData.confidence
+        confidenceScore: realData.confidence,
+        domains: Array.from(realData.domains)
       }
     });
 
@@ -144,212 +150,383 @@ class RealBackendIntegration {
       relatedConcepts,
       metadata: {
         timestamp: new Date().toISOString(),
-        version: "real-backend-v1.0",
+        version: "enhanced-backend-v2.0",
         dataSources: realData.sources,
         realTime: true
       }
     };
   }
 
-  private analyzeQuery(question: string) {
+  private analyzeEnhancedQuery(question: string) {
     const questionLower = question.toLowerCase();
     
-    // Common question patterns
-    const patterns = {
-      definition: /what is|define|explain/i,
+    // Enhanced categorization
+    const categories = {
+      books: /book|author|literature|novel|story|reading/i,
+      geography: /country|capital|population|location|where is/i,
+      quotes: /quote|saying|quotation|famous words/i,
+      numbers: /number|fact about \d+|mathematical/i,
+      space: /space|planet|nasa|astronomy|mars|moon/i,
+      weather: /weather|temperature|climate|forecast/i,
+      tech: /programming|code|github|software|developer/i,
+      crypto: /bitcoin|cryptocurrency|crypto|ethereum|price/i,
+      finance: /stock|market|price|investment|trading/i,
+      current: /latest|recent|current|today|news/i,
+      definition: /what is|define|explain|meaning/i,
       comparison: /compare|difference|versus|vs/i,
-      howTo: /how to|how do|how does/i,
-      factual: /when|where|who|which/i,
-      current: /latest|recent|current|today|now/i,
-      technical: /algorithm|system|process|method/i
+      howto: /how to|how do|how does/i
     };
 
-    const matchedPatterns: string[] = [];
-    for (const [pattern, regex] of Object.entries(patterns)) {
-      if (regex.test(question)) {
-        matchedPatterns.push(pattern);
+    const detectedCategories: string[] = [];
+    let confidence = 0.5;
+
+    for (const [category, pattern] of Object.entries(categories)) {
+      if (pattern.test(questionLower)) {
+        detectedCategories.push(category);
+        confidence += 0.1;
       }
     }
 
-    // Extract key terms (improved)
+    // Extract entities and keywords
     const words = question.split(/\s+/)
-      .filter(word => word.length > 3)
-      .filter(word => !['what', 'how', 'when', 'where', 'why', 'does', 'the', 'and', 'for'].includes(word.toLowerCase()));
-    
-    const mainTopic = words.slice(0, 3).join(' ');
-    
+      .filter(word => word.length > 2)
+      .filter(word => !['what', 'how', 'when', 'where', 'why', 'the', 'and', 'or', 'but'].includes(word.toLowerCase()));
+
     return {
-      mainTopic,
+      mainTopic: words.slice(0, 3).join(' '),
       entities: words,
-      intent: matchedPatterns[0] || 'general',
-      matchedPatterns,
-      needsCurrent: patterns.current.test(question)
+      category: detectedCategories[0] || 'general',
+      categories: detectedCategories,
+      confidence: Math.min(confidence, 0.95),
+      matchedPatterns: detectedCategories,
+      needsRealTime: /latest|recent|current|today|price/.test(questionLower)
     };
   }
 
-  private async searchWikipedia(topic: string) {
-    try {
-      // First, search for the topic
-      const searchResponse = await fetch(
-        `${this.wikipediaAPI}/page/summary/${encodeURIComponent(topic)}`
-      );
-      
-      if (!searchResponse.ok) {
-        throw new Error('Wikipedia search failed');
-      }
-      
-      const data = await searchResponse.json();
-      
-      return {
-        source: 'wikipedia',
-        title: data.title,
-        content: data.extract,
-        url: data.content_urls?.desktop?.page,
-        timestamp: new Date(),
-        credibility: 0.85,
-        type: 'encyclopedia'
-      };
-    } catch (error) {
-      console.error('Wikipedia search error:', error);
-      return null;
+  private selectRelevantAPIs(analysis: any): string[] {
+    const apiMap: Record<string, string[]> = {
+      books: ['wikipedia', 'openlibrary'],
+      geography: ['wikipedia', 'countries', 'weather'],
+      quotes: ['quotable', 'wikipedia'],
+      numbers: ['numbers', 'wikipedia'],
+      space: ['nasa', 'wikipedia'],
+      weather: ['weather', 'wikipedia'],
+      tech: ['github', 'stackoverflow', 'wikipedia'],
+      crypto: ['coingecko', 'news', 'reddit'],
+      finance: ['news', 'reddit'],
+      current: ['news', 'reddit', 'wikipedia'],
+      general: ['wikipedia', 'news']
+    };
+
+    const selectedAPIs = new Set<string>();
+    
+    // Add APIs based on detected categories
+    for (const category of analysis.categories) {
+      const apis = apiMap[category] || [];
+      apis.forEach(api => selectedAPIs.add(api));
     }
+
+    // Always include Wikipedia as baseline
+    selectedAPIs.add('wikipedia');
+
+    // Add news if real-time is needed
+    if (analysis.needsRealTime) {
+      selectedAPIs.add('news');
+      selectedAPIs.add('reddit');
+    }
+
+    return Array.from(selectedAPIs).slice(0, 6); // Limit to 6 APIs for performance
   }
 
-  private async searchNews(topic: string) {
-    if (!this.newsAPI) {
-      return this.getFallbackNews(topic);
+  private createSearchPromises(analysis: any, selectedAPIs: string[]) {
+    const promises: Promise<any>[] = [];
+
+    for (const api of selectedAPIs) {
+      switch (api) {
+        case 'wikipedia':
+          promises.push(this.searchWikipedia(analysis.mainTopic));
+          break;
+        case 'news':
+          if (this.newsAPI) promises.push(this.searchNews(analysis.mainTopic));
+          break;
+        case 'openlibrary':
+          promises.push(this.searchOpenLibrary(analysis.mainTopic));
+          break;
+        case 'countries':
+          promises.push(this.searchCountries(analysis.mainTopic));
+          break;
+        case 'quotable':
+          promises.push(this.searchQuotes(analysis.mainTopic));
+          break;
+        case 'numbers':
+          promises.push(this.searchNumbers(analysis.mainTopic));
+          break;
+        case 'nasa':
+          promises.push(this.searchNASA(analysis.mainTopic));
+          break;
+        case 'github':
+          promises.push(this.searchGitHub(analysis.mainTopic));
+          break;
+        case 'coingecko':
+          promises.push(this.searchCrypto(analysis.mainTopic));
+          break;
+        case 'stackoverflow':
+          promises.push(this.searchStackOverflow(analysis.mainTopic));
+          break;
+        case 'reddit':
+          promises.push(this.searchReddit(analysis.mainTopic));
+          break;
+      }
     }
 
+    return promises;
+  }
+
+  // New API search methods
+  private async searchOpenLibrary(topic: string) {
     try {
       const response = await fetch(
-        `${this.newsAPI}/everything?q=${encodeURIComponent(topic)}&sortBy=relevancy&pageSize=5&apiKey=${process.env.NEWS_API_KEY}`
+        `${this.openLibraryAPI}/search.json?q=${encodeURIComponent(topic)}&limit=3`
       );
       
-      if (!response.ok) throw new Error('News API failed');
+      if (!response.ok) throw new Error('OpenLibrary search failed');
       
       const data = await response.json();
       
       return {
-        source: 'news',
-        articles: data.articles?.slice(0, 3).map((article: any) => ({
-          title: article.title,
-          content: article.description,
-          url: article.url,
-          publishedAt: article.publishedAt,
-          source: article.source.name
+        source: 'openlibrary',
+        books: data.docs?.slice(0, 3).map((book: any) => ({
+          title: book.title,
+          author: book.author_name?.[0] || 'Unknown Author',
+          publishYear: book.first_publish_year,
+          subjects: book.subject?.slice(0, 3) || []
+        })) || [],
+        credibility: 0.8,
+        type: 'literature'
+      };
+    } catch (error) {
+      console.error('OpenLibrary search error:', error);
+      return null;
+    }
+  }
+
+  private async searchCountries(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.countriesAPI}/name/${encodeURIComponent(topic)}`
+      );
+      
+      if (!response.ok) throw new Error('Countries search failed');
+      
+      const data = await response.json();
+      
+      return {
+        source: 'countries',
+        countries: data.slice(0, 2).map((country: any) => ({
+          name: country.name.common,
+          capital: country.capital?.[0],
+          population: country.population,
+          region: country.region,
+          languages: Object.values(country.languages || {}).join(', ')
+        })),
+        credibility: 0.9,
+        type: 'geography'
+      };
+    } catch (error) {
+      console.error('Countries search error:', error);
+      return null;
+    }
+  }
+
+  private async searchQuotes(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.quotesAPI}/quotes?tags=${encodeURIComponent(topic)}&limit=3`
+      );
+      
+      if (!response.ok) throw new Error('Quotes search failed');
+      
+      const data = await response.json();
+      
+      return {
+        source: 'quotable',
+        quotes: data.results?.map((quote: any) => ({
+          content: quote.content,
+          author: quote.author,
+          tags: quote.tags
         })) || [],
         credibility: 0.7,
-        type: 'current_events'
+        type: 'wisdom'
       };
     } catch (error) {
-      console.error('News search error:', error);
-      return this.getFallbackNews(topic);
-    }
-  }
-
-  private getFallbackNews(topic: string) {
-    return {
-      source: 'news_fallback',
-      articles: [{
-        title: `Recent developments in ${topic}`,
-        content: `Current information about ${topic} - this would be populated from free news APIs or RSS feeds in production.`,
-        url: `https://news.google.com/search?q=${encodeURIComponent(topic)}`,
-        publishedAt: new Date().toISOString(),
-        source: 'Google News'
-      }],
-      credibility: 0.6,
-      type: 'current_events'
-    };
-  }
-
-  private async searchAcademic(topic: string) {
-    try {
-      // Use arXiv API for academic papers (free)
-      const response = await fetch(
-        `http://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(topic)}&start=0&max_results=3`
-      );
-      
-      if (!response.ok) throw new Error('arXiv search failed');
-      
-      const xmlText = await response.text();
-      
-      // Simple XML parsing for arXiv results
-      const papers = this.parseArXivXML(xmlText);
-      
-      return {
-        source: 'academic',
-        papers: papers.slice(0, 2),
-        credibility: 0.9,
-        type: 'research'
-      };
-    } catch (error) {
-      console.error('Academic search error:', error);
-      return {
-        source: 'academic_fallback',
-        papers: [{
-          title: `Academic research on ${topic}`,
-          summary: `Research literature about ${topic} is available through academic databases.`,
-          url: `https://scholar.google.com/scholar?q=${encodeURIComponent(topic)}`,
-          authors: ['Various researchers']
-        }],
-        credibility: 0.8,
-        type: 'research'
-      };
-    }
-  }
-
-  private parseArXivXML(xmlText: string) {
-    const papers: any[] = [];
-    
-    // Simple regex parsing for arXiv XML (in production, use proper XML parser)
-    const entryRegex = /<entry>(.*?)<\/entry>/gi;
-    const matches = xmlText.match(entryRegex) || [];
-    
-    for (const match of matches.slice(0, 3)) {
-      const titleMatch = match.match(/<title>(.*?)<\/title>/i);
-      const summaryMatch = match.match(/<summary>(.*?)<\/summary>/i);
-      const linkMatch = match.match(/<id>(.*?)<\/id>/i);
-      
-      if (titleMatch && summaryMatch) {
-        papers.push({
-          title: titleMatch[1].trim(),
-          summary: summaryMatch[1].trim().substring(0, 300) + '...',
-          url: linkMatch?.[1] || 'https://arxiv.org',
-          authors: ['Research Authors']
-        });
-      }
-    }
-    
-    return papers;
-  }
-
-  private async searchWolfram(question: string) {
-    if (!this.wolfram) {
+      console.error('Quotes search error:', error);
       return null;
     }
+  }
+
+  private async searchNumbers(topic: string) {
+    // Extract number from topic if present
+    const numberMatch = topic.match(/\d+/);
+    if (!numberMatch) return null;
 
     try {
-      const response = await fetch(
-        `${this.wolfram}/result?appid=${process.env.WOLFRAM_API_KEY}&i=${encodeURIComponent(question)}`
-      );
+      const response = await fetch(`${this.numbersAPI}/${numberMatch[0]}`);
       
-      if (!response.ok) throw new Error('Wolfram Alpha failed');
+      if (!response.ok) throw new Error('Numbers API failed');
       
-      const result = await response.text();
+      const fact = await response.text();
       
       return {
-        source: 'wolfram',
-        result,
+        source: 'numbers',
+        fact,
+        number: numberMatch[0],
+        credibility: 0.6,
+        type: 'mathematics'
+      };
+    } catch (error) {
+      console.error('Numbers search error:', error);
+      return null;
+    }
+  }
+
+  private async searchNASA(topic: string) {
+    try {
+      // Use NASA's image and video library
+      const response = await fetch(
+        `https://images-api.nasa.gov/search?q=${encodeURIComponent(topic)}&media_type=image&page_size=3`
+      );
+      
+      if (!response.ok) throw new Error('NASA search failed');
+      
+      const data = await response.json();
+      
+      return {
+        source: 'nasa',
+        items: data.collection?.items?.slice(0, 2).map((item: any) => ({
+          title: item.data?.[0]?.title,
+          description: item.data?.[0]?.description,
+          dateCreated: item.data?.[0]?.date_created,
+          center: item.data?.[0]?.center
+        })) || [],
         credibility: 0.95,
-        type: 'computational'
+        type: 'space'
       };
     } catch (error) {
-      console.error('Wolfram Alpha error:', error);
+      console.error('NASA search error:', error);
       return null;
     }
   }
 
-  private consolidateResults(results: PromiseSettledResult<any>[]): ConsolidatedData {
+  private async searchGitHub(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.githubAPI}/search/repositories?q=${encodeURIComponent(topic)}&sort=stars&per_page=3`
+      );
+      
+      if (!response.ok) throw new Error('GitHub search failed');
+      
+      const data = await response.json();
+      
+      return {
+        source: 'github',
+        repositories: data.items?.slice(0, 3).map((repo: any) => ({
+          name: repo.name,
+          description: repo.description,
+          stars: repo.stargazers_count,
+          language: repo.language,
+          owner: repo.owner.login
+        })) || [],
+        credibility: 0.8,
+        type: 'technology'
+      };
+    } catch (error) {
+      console.error('GitHub search error:', error);
+      return null;
+    }
+  }
+
+  private async searchCrypto(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.coingeckoAPI}/search?query=${encodeURIComponent(topic)}`
+      );
+      
+      if (!response.ok) throw new Error('CoinGecko search failed');
+      
+      const data = await response.json();
+      
+      return {
+        source: 'coingecko',
+        coins: data.coins?.slice(0, 3).map((coin: any) => ({
+          name: coin.name,
+          symbol: coin.symbol,
+          marketCapRank: coin.market_cap_rank
+        })) || [],
+        credibility: 0.8,
+        type: 'cryptocurrency'
+      };
+    } catch (error) {
+      console.error('CoinGecko search error:', error);
+      return null;
+    }
+  }
+
+  private async searchStackOverflow(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.stackOverflowAPI}/search/advanced?order=desc&sort=relevance&q=${encodeURIComponent(topic)}&site=stackoverflow`
+      );
+      
+      if (!response.ok) throw new Error('StackOverflow search failed');
+      
+      const data = await response.json();
+      
+      return {
+        source: 'stackoverflow',
+        questions: data.items?.slice(0, 3).map((item: any) => ({
+          title: item.title,
+          score: item.score,
+          answerCount: item.answer_count,
+          tags: item.tags
+        })) || [],
+        credibility: 0.8,
+        type: 'programming'
+      };
+    } catch (error) {
+      console.error('StackOverflow search error:', error);
+      return null;
+    }
+  }
+
+  private async searchReddit(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.redditAPI}/all/search.json?q=${encodeURIComponent(topic)}&limit=3&sort=relevance`
+      );
+      
+      if (!response.ok) throw new Error('Reddit search failed');
+      
+      const data = await response.json();
+      
+      return {
+        source: 'reddit',
+        posts: data.data?.children?.slice(0, 2).map((post: any) => ({
+          title: post.data.title,
+          subreddit: post.data.subreddit,
+          score: post.data.score,
+          numComments: post.data.num_comments
+        })) || [],
+        credibility: 0.5,
+        type: 'social'
+      };
+    } catch (error) {
+      console.error('Reddit search error:', error);
+      return null;
+    }
+  }
+
+  // Enhanced result consolidation
+  private consolidateEnhancedResults(results: PromiseSettledResult<any>[]): ConsolidatedData {
     const consolidated: ConsolidatedData = {
       sources: [] as string[],
       documents: [] as Document[],
@@ -369,279 +546,265 @@ class RealBackendIntegration {
         consolidated.sources.push(data.source);
         validResults++;
 
-        // Process Wikipedia data
-        if (data.source === 'wikipedia' && data.content) {
-          consolidated.documents.push({
-            id: 'wiki-' + Date.now(),
-            score: 0.85,
-            preview: data.content.substring(0, 300) + '...',
-            content: data.content,
-            meta: {
-              topic: 'encyclopedia',
-              category: 'reference',
-              importance: 'high',
-              keywords: data.title.split(' '),
-              domain: 'knowledge'
-            }
-          });
-          consolidated.domains.add('encyclopedia');
-          consolidated.complexity += 2;
-        }
-
-        // Process news data
-        if (data.source === 'news' || data.source === 'news_fallback') {
-          for (const article of data.articles || []) {
-            consolidated.documents.push({
-              id: 'news-' + Date.now() + Math.random(),
-              score: 0.7,
-              preview: article.content?.substring(0, 300) + '...' || article.title,
-              content: article.content || article.title,
-              meta: {
-                topic: 'current_events',
-                category: 'news',
-                importance: 'medium',
-                keywords: article.title.split(' ').slice(0, 5),
-                domain: 'current_events'
-              }
-            });
-          }
-          consolidated.domains.add('current_events');
-          consolidated.complexity += 1;
-        }
-
-        // Process academic data
-        if (data.source === 'academic' || data.source === 'academic_fallback') {
-          for (const paper of data.papers || []) {
-            consolidated.documents.push({
-              id: 'academic-' + Date.now() + Math.random(),
-              score: 0.9,
-              preview: paper.summary?.substring(0, 300) + '...' || paper.title,
-              content: paper.summary || paper.title,
-              meta: {
-                topic: 'research',
-                category: 'academic',
-                importance: 'high',
-                keywords: paper.title.split(' ').slice(0, 5),
-                domain: 'research'
-              }
-            });
-          }
-          consolidated.domains.add('research');
-          consolidated.complexity += 3;
-        }
-
-        // Process Wolfram data
-        if (data.source === 'wolfram' && data.result) {
-          consolidated.documents.push({
-            id: 'wolfram-' + Date.now(),
-            score: 0.95,
-            preview: data.result.substring(0, 300),
-            content: data.result,
-            meta: {
-              topic: 'computation',
-              category: 'factual',
-              importance: 'high',
-              keywords: ['calculation', 'fact'],
-              domain: 'computation'
-            }
-          });
-          consolidated.domains.add('computation');
-          consolidated.complexity += 2;
-        }
+        // Process different data types
+        this.processDataBySource(data, consolidated);
       }
     }
 
-    // Calculate overall confidence
-    consolidated.confidence = validResults > 0 ? Math.min(0.95, validResults * 0.2 + 0.3) : 0.1;
+    consolidated.confidence = validResults > 0 ? Math.min(0.95, validResults * 0.15 + 0.25) : 0.1;
     consolidated.totalResults = consolidated.documents.length;
-
-    // Generate inference chains from real data
-    consolidated.inferenceChains = consolidated.documents.slice(0, 3).map(doc => 
+    consolidated.inferenceChains = consolidated.documents.slice(0, 4).map(doc => 
       `${doc.meta.domain}: ${doc.meta.topic} → ${doc.meta.category}`
     );
 
     return consolidated;
   }
 
-  private generateRealAnswer(question: string, analysis: any, realData: ConsolidatedData): string {
+  private processDataBySource(data: any, consolidated: ConsolidatedData) {
+    switch (data.source) {
+      case 'openlibrary':
+        this.processBookData(data, consolidated);
+        break;
+      case 'countries':
+        this.processCountryData(data, consolidated);
+        break;
+      case 'quotable':
+        this.processQuoteData(data, consolidated);
+        break;
+      case 'numbers':
+        this.processNumberData(data, consolidated);
+        break;
+      case 'nasa':
+        this.processNASAData(data, consolidated);
+        break;
+      case 'github':
+        this.processGitHubData(data, consolidated);
+        break;
+      case 'coingecko':
+        this.processCryptoData(data, consolidated);
+        break;
+      case 'stackoverflow':
+        this.processStackOverflowData(data, consolidated);
+        break;
+      case 'reddit':
+        this.processRedditData(data, consolidated);
+        break;
+    }
+  }
+
+  // Data processing methods for each source
+  private processBookData(data: any, consolidated: ConsolidatedData) {
+    for (const book of data.books || []) {
+      consolidated.documents.push({
+        id: 'book-' + Date.now() + Math.random(),
+        score: 0.8,
+        preview: `"${book.title}" by ${book.author} (${book.publishYear})`,
+        content: `${book.title} by ${book.author}, published in ${book.publishYear}. Subjects: ${book.subjects.join(', ')}`,
+        meta: {
+          topic: 'literature',
+          category: 'books',
+          importance: 'medium',
+          keywords: [book.title, book.author, 'literature'],
+          domain: 'literature'
+        }
+      });
+    }
+    consolidated.domains.add('literature');
+    consolidated.complexity += 1;
+  }
+
+  private processCountryData(data: any, consolidated: ConsolidatedData) {
+    for (const country of data.countries || []) {
+      consolidated.documents.push({
+        id: 'country-' + Date.now() + Math.random(),
+        score: 0.9,
+        preview: `${country.name}: Capital ${country.capital}, Population ${country.population.toLocaleString()}`,
+        content: `${country.name} is located in ${country.region} with capital city ${country.capital}. Population: ${country.population.toLocaleString()}. Languages: ${country.languages}`,
+        meta: {
+          topic: 'geography',
+          category: 'countries',
+          importance: 'high',
+          keywords: [country.name, country.capital, country.region],
+          domain: 'geography'
+        }
+      });
+    }
+    consolidated.domains.add('geography');
+    consolidated.complexity += 2;
+  }
+
+  private processQuoteData(data: any, consolidated: ConsolidatedData) {
+    for (const quote of data.quotes || []) {
+      consolidated.documents.push({
+        id: 'quote-' + Date.now() + Math.random(),
+        score: 0.7,
+        preview: `"${quote.content}" - ${quote.author}`,
+        content: `Quote by ${quote.author}: "${quote.content}" Tags: ${quote.tags.join(', ')}`,
+        meta: {
+          topic: 'wisdom',
+          category: 'quotes',
+          importance: 'medium',
+          keywords: [quote.author, ...quote.tags],
+          domain: 'philosophy'
+        }
+      });
+    }
+    consolidated.domains.add('philosophy');
+    consolidated.complexity += 1;
+  }
+
+  private processNumberData(data: any, consolidated: ConsolidatedData) {
+    if (data.fact) {
+      consolidated.documents.push({
+        id: 'number-' + Date.now(),
+        score: 0.6,
+        preview: `Mathematical fact about ${data.number}`,
+        content: data.fact,
+        meta: {
+          topic: 'mathematics',
+          category: 'facts',
+          importance: 'low',
+          keywords: [data.number, 'mathematics', 'fact'],
+          domain: 'mathematics'
+        }
+      });
+      consolidated.domains.add('mathematics');
+      consolidated.complexity += 1;
+    }
+  }
+
+  private processNASAData(data: any, consolidated: ConsolidatedData) {
+    for (const item of data.items || []) {
+      consolidated.documents.push({
+        id: 'nasa-' + Date.now() + Math.random(),
+        score: 0.95,
+        preview: `NASA: ${item.title}`,
+        content: `${item.title}: ${item.description} (${item.center}, ${item.dateCreated})`,
+        meta: {
+          topic: 'space',
+          category: 'astronomy',
+          importance: 'high',
+          keywords: ['nasa', 'space', 'astronomy'],
+          domain: 'science'
+        }
+      });
+    }
+    consolidated.domains.add('science');
+    consolidated.complexity += 3;
+  }
+
+  private processGitHubData(data: any, consolidated: ConsolidatedData) {
+    for (const repo of data.repositories || []) {
+      consolidated.documents.push({
+        id: 'github-' + Date.now() + Math.random(),
+        score: 0.8,
+        preview: `${repo.name} by ${repo.owner} (${repo.stars} stars)`,
+        content: `${repo.name}: ${repo.description} Language: ${repo.language}, Stars: ${repo.stars}`,
+        meta: {
+          topic: 'programming',
+          category: 'opensource',
+          importance: 'medium',
+          keywords: [repo.name, repo.language, 'github'],
+          domain: 'technology'
+        }
+      });
+    }
+    consolidated.domains.add('technology');
+    consolidated.complexity += 2;
+  }
+
+  private processCryptoData(data: any, consolidated: ConsolidatedData) {
+    for (const coin of data.coins || []) {
+      consolidated.documents.push({
+        id: 'crypto-' + Date.now() + Math.random(),
+        score: 0.8,
+        preview: `${coin.name} (${coin.symbol}) - Rank #${coin.marketCapRank}`,
+        content: `${coin.name} (${coin.symbol}) is ranked #${coin.marketCapRank} by market capitalization`,
+        meta: {
+          topic: 'cryptocurrency',
+          category: 'finance',
+          importance: 'medium',
+          keywords: [coin.name, coin.symbol, 'crypto'],
+          domain: 'finance'
+        }
+      });
+    }
+    consolidated.domains.add('finance');
+    consolidated.complexity += 2;
+  }
+
+  private processStackOverflowData(data: any, consolidated: ConsolidatedData) {
+    for (const question of data.questions || []) {
+      consolidated.documents.push({
+        id: 'stackoverflow-' + Date.now() + Math.random(),
+        score: 0.8,
+        preview: `Stack Overflow: ${question.title.substring(0, 100)}...`,
+        content: `Programming question: ${question.title} (Score: ${question.score}, Answers: ${question.answerCount}) Tags: ${question.tags.join(', ')}`,
+        meta: {
+          topic: 'programming',
+          category: 'qna',
+          importance: 'medium',
+          keywords: [...question.tags, 'programming'],
+          domain: 'technology'
+        }
+      });
+    }
+    consolidated.domains.add('technology');
+    consolidated.complexity += 2;
+  }
+
+  private processRedditData(data: any, consolidated: ConsolidatedData) {
+    for (const post of data.posts || []) {
+      consolidated.documents.push({
+        id: 'reddit-' + Date.now() + Math.random(),
+        score: 0.5,
+        preview: `r/${post.subreddit}: ${post.title.substring(0, 100)}...`,
+        content: `Reddit discussion from r/${post.subreddit}: ${post.title} (${post.score} upvotes, ${post.numComments} comments)`,
+        meta: {
+          topic: 'social',
+          category: 'discussion',
+          importance: 'low',
+          keywords: [post.subreddit, 'reddit', 'social'],
+          domain: 'social'
+        }
+      });
+    }
+    consolidated.domains.add('social');
+    consolidated.complexity += 1;
+  }
+
+  // Enhanced answer generation
+  private generateEnhancedAnswer(question: string, analysis: any, realData: ConsolidatedData): string {
     if (realData.documents.length === 0) {
-      return "I apologize, but I couldn't retrieve current information about this topic from my data sources. This might be due to API limitations or the topic being very recent or specialized.";
+      return "I searched across multiple data sources but couldn't find specific information about this topic. This might be a very specialized query or the topic might not be well-covered in the available databases.";
     }
 
     let answer = "";
-
-    // Start with the most authoritative source
     const sortedDocs = realData.documents.sort((a, b) => b.score - a.score);
+    const domains = Array.from(realData.domains);
+
+    // Multi-domain introduction
+    if (domains.length > 1) {
+      answer += `I found relevant information across ${domains.length} domains (${domains.join(', ')}): `;
+    }
+
+    // Primary source information
     const primaryDoc = sortedDocs[0];
+    answer += primaryDoc.content;
 
-    // Generate contextual introduction
-    const sourceType = primaryDoc.meta.domain;
-    switch (sourceType) {
-      case 'encyclopedia':
-        answer += "According to encyclopedic sources: ";
-        break;
-      case 'current_events':
-        answer += "Based on recent news reports: ";
-        break;
-      case 'research':
-        answer += "Academic research indicates: ";
-        break;
-      case 'computation':
-        answer += "Computational analysis shows: ";
-        break;
-      default:
-        answer += "Based on available information: ";
+    // Add supporting information from different domains
+    const supportingDocs = sortedDocs.slice(1, 3)
+      .filter(doc => doc.meta.domain !== primaryDoc.meta.domain);
+    
+    if (supportingDocs.length > 0) {
+      answer += "\n\nAdditional perspectives: ";
+      answer += supportingDocs.map(doc => doc.content).join(' ');
     }
 
-    // Add primary information
-    answer += primaryDoc.content.replace(/\.\.\.$/, '');
-
-    // Add supporting information from other sources
-    if (sortedDocs.length > 1) {
-      const supportingDocs = sortedDocs.slice(1, 3);
-      const domains = [...new Set(supportingDocs.map(doc => doc.meta.domain))];
-      
-      if (domains.length > 0) {
-        answer += `\n\nAdditional context from ${domains.join(' and ')} sources: `;
-        const supportingInfo = supportingDocs
-          .map(doc => doc.content.substring(0, 150))
-          .join(' ');
-        answer += supportingInfo.replace(/\.\.\.$/, '');
-      }
-    }
-
-    // Add recency information
-    const hasCurrentEvents = realData.domains.has('current_events');
-    if (hasCurrentEvents) {
-      answer += "\n\nThis includes current information from recent reports.";
-    }
-
-    // Add confidence note
+    // Add confidence and source information
     if (realData.confidence > 0.8) {
-      answer += "\n\nThis information is drawn from multiple authoritative sources.";
-    } else if (realData.confidence < 0.5) {
-      answer += "\n\nPlease note: Limited source information was available for this query.";
+      answer += `\n\nThis information is compiled from ${realData.sources.length} reliable sources including ${realData.sources.slice(0, 3).join(', ')}.`;
     }
 
     return answer;
-  }
-
-  private extractRelatedConcepts(realData: ConsolidatedData): string[] {
-    const concepts = new Set<string>();
-    
-    for (const doc of realData.documents) {
-      // Add keywords from each document
-      doc.meta.keywords.forEach((keyword: string) => {
-        if (keyword.length > 3) {
-          concepts.add(keyword);
-        }
-      });
-      
-      // Add domain-specific concepts
-      concepts.add(doc.meta.domain);
-      concepts.add(doc.meta.category);
-    }
-    
-    return Array.from(concepts).slice(0, 8);
-  }
-
-  private generateSmartFollowUps(question: string, realData: ConsolidatedData): string[] {
-    const followUps: string[] = [];
-    const domains = Array.from(realData.domains);
-    
-    // Generate domain-specific follow-ups
-    for (const domain of domains.slice(0, 2)) {
-      switch (domain) {
-        case 'encyclopedia':
-          followUps.push("What are the key historical developments in this area?");
-          break;
-        case 'current_events':
-          followUps.push("What are the latest developments on this topic?");
-          break;
-        case 'research':
-          followUps.push("What does recent research say about this?");
-          break;
-        case 'computation':
-          followUps.push("Can you provide more detailed calculations?");
-          break;
-      }
-    }
-    
-    // Generate content-based follow-ups
-    const topDoc = realData.documents[0];
-    if (topDoc) {
-      const keywords = topDoc.meta.keywords.slice(0, 2);
-      for (const keyword of keywords) {
-        if (keyword.length > 4) {
-          followUps.push(`Tell me more about ${keyword}`);
-        }
-      }
-    }
-    
-    // Add comparative questions
-    followUps.push("How does this compare to related concepts?");
-    followUps.push("What are the practical applications?");
-    
-    return followUps.slice(0, 5);
-  }
-}
-
-// Initialize the real backend integration
-const realBackend = new RealBackendIntegration();
-
-// Enhanced API endpoint with real data
-export async function POST(request: NextRequest) {
-  try {
-    const { question, options } = await request.json();
-    
-    if (!question || typeof question !== 'string') {
-      return NextResponse.json(
-        { error: 'Question is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
-    if (question.length > 1000) {
-      return NextResponse.json(
-        { error: 'Question too long. Please limit to 1000 characters.' },
-        { status: 400 }
-      );
-    }
-
-    const result = await realBackend.query(question, options || {});
-    
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('Real Backend API error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Internal server error during real data processing',
-        timestamp: new Date().toISOString()
-      },
-      { status: 500 }
-    );
-  }
-}
-
-// Health check with real backend status
-export async function GET() {
-  return NextResponse.json({
-    status: 'operational',
-    service: 'real-backend-integration',
-    version: '1.0.0',
-    dataSources: {
-      wikipedia: 'active',
-      news: process.env.NEWS_API_KEY ? 'active' : 'fallback',
-      academic: 'active',
-      wolfram: process.env.WOLFRAM_API_KEY ? 'active' : 'inactive'
-    },
-    capabilities: {
-      realTimeData: true,
-      multiSourceSearch: true,
-      factualAnswers: true,
-      currentEvents: true,
-      academicResearch: true
-    },
-    timestamp: new Date().toISOString()
-  });
 }
