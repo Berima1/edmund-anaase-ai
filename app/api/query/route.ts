@@ -1,16 +1,82 @@
-// app/api/query/route.ts - REAL BACKEND WITH LIVE DATA INTEGRATION
+// app/api/query/route.ts - CORRECTED REAL BACKEND WITH LIVE DATA INTEGRATION
 import { NextRequest, NextResponse } from 'next/server';
+
+// Enhanced Types for Real Backend Integration
+interface Document {
+  id: string;
+  score: number;
+  preview: string;
+  content: string;
+  meta: {
+    topic: string;
+    category: string;
+    importance: string;
+    keywords: string[];
+    domain: string;
+  };
+}
+
+interface GraphTriple {
+  subject: string;
+  predicate: string;
+  object: string;
+  weight: number;
+  confidence: number;
+  source: string;
+}
+
+interface TraceItem {
+  type: string;
+  timestamp: string;
+  info: Record<string, any>;
+  score?: number;
+}
+
+interface DeepAnalysis {
+  conceptualDepth: number;
+  crossDomainConnections: number;
+  inferenceChains: string[];
+  confidenceScore: number;
+}
+
+interface QueryResponse {
+  answer: string;
+  docs: Document[];
+  path: GraphTriple[];
+  rulesFired: string[];
+  trace: TraceItem[];
+  deepAnalysis: DeepAnalysis;
+  alternativeQuestions: string[];
+  relatedConcepts: string[];
+  metadata: {
+    timestamp: string;
+    version: string;
+    dataSources: string[];
+    realTime: boolean;
+  };
+}
+
+interface ConsolidatedData {
+  sources: string[];
+  documents: Document[];
+  relationships: GraphTriple[];
+  domains: Set<string>;
+  complexity: number;
+  confidence: number;
+  totalResults: number;
+  inferenceChains: string[];
+}
 
 // Real Data Integration System
 class RealBackendIntegration {
   private wikipediaAPI = 'https://en.wikipedia.org/api/rest_v1';
   private newsAPI = process.env.NEWS_API_KEY ? 'https://newsapi.org/v2' : null;
-  private scholarAPI = 'https://serpapi.com/search'; // For academic papers
+  private scholarAPI = 'https://serpapi.com/search';
   private wolfram = process.env.WOLFRAM_API_KEY ? 'https://api.wolframalpha.com/v1' : null;
 
-  async query(question: string, options: Record<string, any> = {}) {
+  async query(question: string, options: Record<string, any> = {}): Promise<QueryResponse> {
     const startTime = Date.now();
-    const trace = [];
+    const trace: TraceItem[] = [];
 
     // Step 1: Analyze query intent and extract key terms
     trace.push({
@@ -88,10 +154,6 @@ class RealBackendIntegration {
   private analyzeQuery(question: string) {
     const questionLower = question.toLowerCase();
     
-    // Extract main topic using NLP patterns
-    const topics = [];
-    const entities = [];
-    
     // Common question patterns
     const patterns = {
       definition: /what is|define|explain/i,
@@ -102,7 +164,7 @@ class RealBackendIntegration {
       technical: /algorithm|system|process|method/i
     };
 
-    const matchedPatterns = [];
+    const matchedPatterns: string[] = [];
     for (const [pattern, regex] of Object.entries(patterns)) {
       if (regex.test(question)) {
         matchedPatterns.push(pattern);
@@ -133,10 +195,7 @@ class RealBackendIntegration {
       );
       
       if (!searchResponse.ok) {
-        // If direct lookup fails, try search
-        const searchUrl = `https://en.wikipedia.org/api/rest_v1/page/related/${encodeURIComponent(topic)}`;
-        const relatedResponse = await fetch(searchUrl);
-        if (!relatedResponse.ok) throw new Error('Wikipedia search failed');
+        throw new Error('Wikipedia search failed');
       }
       
       const data = await searchResponse.json();
@@ -189,7 +248,6 @@ class RealBackendIntegration {
   }
 
   private getFallbackNews(topic: string) {
-    // Fallback to free news sources
     return {
       source: 'news_fallback',
       articles: [{
@@ -241,7 +299,7 @@ class RealBackendIntegration {
   }
 
   private parseArXivXML(xmlText: string) {
-    const papers = [];
+    const papers: any[] = [];
     
     // Simple regex parsing for arXiv XML (in production, use proper XML parser)
     const entryRegex = /<entry>(.*?)<\/entry>/gi;
@@ -291,16 +349,16 @@ class RealBackendIntegration {
     }
   }
 
-  private consolidateResults(results: PromiseSettledResult<any>[]) {
-    const consolidated = {
-      sources: [],
-      documents: [],
-      relationships: [],
-      domains: new Set(),
+  private consolidateResults(results: PromiseSettledResult<any>[]): ConsolidatedData {
+    const consolidated: ConsolidatedData = {
+      sources: [] as string[],
+      documents: [] as Document[],
+      relationships: [] as GraphTriple[],
+      domains: new Set<string>(),
       complexity: 0,
       confidence: 0,
       totalResults: 0,
-      inferenceChains: []
+      inferenceChains: [] as string[]
     };
 
     let validResults = 0;
@@ -405,7 +463,7 @@ class RealBackendIntegration {
     return consolidated;
   }
 
-  private generateRealAnswer(question: string, analysis: any, realData: any): string {
+  private generateRealAnswer(question: string, analysis: any, realData: ConsolidatedData): string {
     if (realData.documents.length === 0) {
       return "I apologize, but I couldn't retrieve current information about this topic from my data sources. This might be due to API limitations or the topic being very recent or specialized.";
     }
@@ -468,7 +526,7 @@ class RealBackendIntegration {
     return answer;
   }
 
-  private extractRelatedConcepts(realData: any): string[] {
+  private extractRelatedConcepts(realData: ConsolidatedData): string[] {
     const concepts = new Set<string>();
     
     for (const doc of realData.documents) {
@@ -487,7 +545,7 @@ class RealBackendIntegration {
     return Array.from(concepts).slice(0, 8);
   }
 
-  private generateSmartFollowUps(question: string, realData: any): string[] {
+  private generateSmartFollowUps(question: string, realData: ConsolidatedData): string[] {
     const followUps: string[] = [];
     const domains = Array.from(realData.domains);
     
@@ -586,4 +644,4 @@ export async function GET() {
     },
     timestamp: new Date().toISOString()
   });
-      }
+}
