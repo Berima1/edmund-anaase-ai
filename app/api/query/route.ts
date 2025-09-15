@@ -244,7 +244,7 @@ class RealBackendIntegration {
     const papers = [];
     
     // Simple regex parsing for arXiv XML (in production, use proper XML parser)
-    const entryRegex = /<entry>(.*?)<\/entry>/gs;
+    const entryRegex = /<entry>(.*?)<\/entry>/gi;
     const matches = xmlText.match(entryRegex) || [];
     
     for (const match of matches.slice(0, 3)) {
