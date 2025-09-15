@@ -248,9 +248,9 @@ class RealBackendIntegration {
     const matches = xmlText.match(entryRegex) || [];
     
     for (const match of matches.slice(0, 3)) {
-      const titleMatch = match.match(/<title>(.*?)<\/title>/s);
-      const summaryMatch = match.match(/<summary>(.*?)<\/summary>/s);
-      const linkMatch = match.match(/<id>(.*?)<\/id>/s);
+      const titleMatch = match.match(/<title>(.*?)<\/title>/i);
+      const summaryMatch = match.match(/<summary>(.*?)<\/summary>/i);
+      const linkMatch = match.match(/<id>(.*?)<\/id>/i);
       
       if (titleMatch && summaryMatch) {
         papers.push({
