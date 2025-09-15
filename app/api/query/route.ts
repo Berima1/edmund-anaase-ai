@@ -70,7 +70,7 @@ class RealBackendIntegration {
       trace,
       deepAnalysis: {
         conceptualDepth: Math.min(realData.complexity, 10),
-        crossDomainConnections: realData.domains.length,
+        crossDomainConnections: realData.domains.size,
         inferenceChains: realData.inferenceChains,
         confidenceScore: Math.round(realData.confidence * 100)
       },
