@@ -1,7 +1,6 @@
-// app/api/query/route.ts - FIXED BACKEND WITH WORKING WEATHER API
+// app/api/query/route.ts - SIMPLIFIED BACKEND WITH WORKING APIs
 import { NextRequest, NextResponse } from 'next/server';
 
-// [Previous interfaces remain the same...]
 interface Document {
   id: string;
   score: number;
@@ -27,48 +26,54 @@ interface ConsolidatedData {
   inferenceChains: string[];
 }
 
-class FixedRealBackend {
+class WorkingAPIsBackend {
+  // Only use APIs that actually work reliably
   private wikipediaAPI = 'https://en.wikipedia.org/api/rest_v1';
   private newsAPI = process.env.NEWS_API_KEY ? 'https://newsapi.org/v2' : null;
-  
-  // Free Weather API (no key required)
   private weatherAPI = 'https://api.open-meteo.com/v1/forecast';
   private geocodingAPI = 'https://geocoding-api.open-meteo.com/v1/search';
+  
+  // Working free APIs
+  private quotesAPI = 'https://api.quotable.io';
+  private hackerNewsAPI = 'https://hacker-news.firebaseio.com/v0';
+  private redditAPI = 'https://www.reddit.com';
+  private cryptoAPI = 'https://api.coingecko.com/api/v3';
 
   async query(question: string, options: Record<string, any> = {}) {
     const startTime = Date.now();
     const trace = [];
 
     trace.push({
-      type: "enhanced-query-analysis",
+      type: "query-analysis",
       timestamp: new Date().toISOString(),
-      info: { question, method: "multi_domain_analysis" }
+      info: { question, method: "pattern_matching" }
     });
 
-    const queryAnalysis = this.analyzeEnhancedQuery(question);
-    const selectedAPIs = this.selectRelevantAPIs(queryAnalysis);
+    const queryAnalysis = this.analyzeQuery(question);
+    const selectedAPIs = this.selectWorkingAPIs(queryAnalysis);
     
     trace.push({
-      type: "dynamic-api-selection",
+      type: "api-selection",
       timestamp: new Date().toISOString(),
       info: { 
         selectedAPIs,
         queryType: queryAnalysis.category,
-        confidence: queryAnalysis.confidence
+        location: queryAnalysis.location
       }
     });
 
-    const searchPromises = this.createSearchPromises(queryAnalysis, selectedAPIs);
+    // Only call APIs that we know work
+    const searchPromises = this.createWorkingSearches(queryAnalysis, selectedAPIs);
     const results = await Promise.allSettled(searchPromises);
     const realData = this.consolidateResults(results);
 
-    const answer = this.generateEnhancedAnswer(question, queryAnalysis, realData);
-    const relatedConcepts = this.extractRelatedConcepts(realData);
-    const alternativeQuestions = this.generateSmartFollowUps(question, realData);
+    const answer = this.generateAnswer(question, queryAnalysis, realData);
+    const relatedConcepts = this.extractConcepts(realData);
+    const alternativeQuestions = this.generateFollowUps(question, realData);
 
     const processingTime = Date.now() - startTime;
     trace.push({
-      type: "enhanced-synthesis",
+      type: "data-synthesis",
       timestamp: new Date().toISOString(),
       info: {
         processingTime: `${processingTime}ms`,
@@ -95,109 +100,121 @@ class FixedRealBackend {
       relatedConcepts,
       metadata: {
         timestamp: new Date().toISOString(),
-        version: "fixed-backend-v2.1",
+        version: "working-apis-v1.0",
         dataSources: realData.sources,
         realTime: true
       }
     };
   }
 
-  private analyzeEnhancedQuery(question: string) {
+  private analyzeQuery(question: string) {
     const questionLower = question.toLowerCase();
     
-    const categories = {
-      weather: /weather|temperature|climate|forecast|rain|sunny|cloudy|humidity|wind/i,
-      location: /in \w+|weather in|temperature in|climate in/i,
-      current: /current|today|now|right now/i,
-      books: /book|author|literature|novel/i,
-      geography: /country|capital|population|location/i,
-      tech: /programming|code|github|software/i,
-      crypto: /bitcoin|cryptocurrency|crypto|ethereum/i,
+    const patterns = {
+      weather: /weather|temperature|climate|forecast|rain|sunny|cloudy/i,
+      news: /news|latest|recent|updates|current events|headlines/i,
+      crypto: /bitcoin|cryptocurrency|crypto|ethereum|price|btc|eth/i,
+      tech: /tech|technology|programming|software|hacker news/i,
+      quotes: /quote|inspiration|wisdom|saying|motivational/i,
+      social: /reddit|discussion|opinion|community/i,
       definition: /what is|define|explain|meaning/i,
-      comparison: /compare|difference|versus|vs/i,
-      howto: /how to|how do|how does/i
+      general: /./
     };
 
     const detectedCategories: string[] = [];
-    let confidence = 0.5;
-
-    for (const [category, pattern] of Object.entries(categories)) {
+    
+    for (const [category, pattern] of Object.entries(patterns)) {
       if (pattern.test(questionLower)) {
         detectedCategories.push(category);
-        confidence += 0.1;
       }
     }
 
-    // Extract location for weather queries
+    // Extract location for weather
     let location = '';
-    if (detectedCategories.includes('weather') || detectedCategories.includes('location')) {
-      const locationMatch = question.match(/(?:in|for)\s+([A-Za-z\s]+)(?:\?|$)/i);
+    if (detectedCategories.includes('weather')) {
+      const locationMatch = question.match(/(?:in|for|at)\s+([A-Za-z\s,]+)(?:\?|$)/i);
       if (locationMatch) {
         location = locationMatch[1].trim();
       }
     }
 
+    // Extract search terms
     const words = question.split(/\s+/)
       .filter(word => word.length > 2)
-      .filter(word => !['what', 'how', 'when', 'where', 'why', 'the', 'and', 'or', 'but', 'weather', 'in'].includes(word.toLowerCase()));
+      .filter(word => !['what', 'how', 'when', 'where', 'why', 'the', 'and', 'or', 'in', 'for', 'is'].includes(word.toLowerCase()));
 
     return {
-      mainTopic: location || words.slice(0, 3).join(' '),
+      mainTopic: words.slice(0, 3).join(' '),
       location,
       entities: words,
       category: detectedCategories[0] || 'general',
       categories: detectedCategories,
-      confidence: Math.min(confidence, 0.95),
-      matchedPatterns: detectedCategories,
-      needsRealTime: /latest|recent|current|today|now|weather/.test(questionLower)
+      matchedPatterns: detectedCategories
     };
   }
 
-  private selectRelevantAPIs(analysis: any): string[] {
-    const apiMap: Record<string, string[]> = {
-      weather: ['weather', 'wikipedia'],
-      location: ['weather', 'wikipedia'],
-      books: ['wikipedia'],
-      geography: ['wikipedia'],
-      tech: ['wikipedia'],
-      crypto: ['wikipedia', 'news'],
-      current: ['news', 'wikipedia'],
-      general: ['wikipedia']
-    };
-
+  private selectWorkingAPIs(analysis: any): string[] {
     const selectedAPIs = new Set<string>();
-    
-    for (const category of analysis.categories) {
-      const apis = apiMap[category] || [];
-      apis.forEach(api => selectedAPIs.add(api));
-    }
 
+    // Always include Wikipedia as it's very reliable
     selectedAPIs.add('wikipedia');
 
-    if (analysis.needsRealTime) {
-      selectedAPIs.add('news');
+    // Add specific APIs based on query type
+    if (analysis.categories.includes('weather') && analysis.location) {
+      selectedAPIs.add('weather');
+    }
+    
+    if (analysis.categories.includes('news')) {
+      if (this.newsAPI) {
+        selectedAPIs.add('news');
+      }
+      selectedAPIs.add('hackernews'); // Backup for tech news
+    }
+    
+    if (analysis.categories.includes('crypto')) {
+      selectedAPIs.add('crypto');
+    }
+    
+    if (analysis.categories.includes('tech')) {
+      selectedAPIs.add('hackernews');
+    }
+    
+    if (analysis.categories.includes('quotes')) {
+      selectedAPIs.add('quotes');
+    }
+    
+    if (analysis.categories.includes('social')) {
+      selectedAPIs.add('reddit');
     }
 
-    return Array.from(selectedAPIs).slice(0, 4);
+    return Array.from(selectedAPIs);
   }
 
-  private createSearchPromises(analysis: any, selectedAPIs: string[]) {
+  private createWorkingSearches(analysis: any, selectedAPIs: string[]) {
     const promises: Promise<any>[] = [];
 
     for (const api of selectedAPIs) {
       switch (api) {
-        case 'weather':
-          if (analysis.location) {
-            promises.push(this.searchWeather(analysis.location));
-          }
-          break;
         case 'wikipedia':
           promises.push(this.searchWikipedia(analysis.mainTopic));
           break;
+        case 'weather':
+          promises.push(this.searchWeather(analysis.location));
+          break;
         case 'news':
-          if (this.newsAPI) {
-            promises.push(this.searchNews(analysis.mainTopic));
-          }
+          promises.push(this.searchNews(analysis.mainTopic));
+          break;
+        case 'hackernews':
+          promises.push(this.searchHackerNews(analysis.mainTopic));
+          break;
+        case 'crypto':
+          promises.push(this.searchCrypto(analysis.mainTopic));
+          break;
+        case 'quotes':
+          promises.push(this.searchQuotes(analysis.mainTopic));
+          break;
+        case 'reddit':
+          promises.push(this.searchReddit(analysis.mainTopic));
           break;
       }
     }
@@ -205,90 +222,7 @@ class FixedRealBackend {
     return promises;
   }
 
-  private async searchWeather(location: string) {
-    try {
-      // Step 1: Get coordinates for the location
-      const geoResponse = await fetch(
-        `${this.geocodingAPI}?name=${encodeURIComponent(location)}&count=1&language=en&format=json`
-      );
-      
-      if (!geoResponse.ok) throw new Error('Geocoding failed');
-      
-      const geoData = await geoResponse.json();
-      if (!geoData.results || geoData.results.length === 0) {
-        throw new Error('Location not found');
-      }
-      
-      const { latitude, longitude, name, country } = geoData.results[0];
-      
-      // Step 2: Get weather data
-      const weatherResponse = await fetch(
-        `${this.weatherAPI}?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&hourly=temperature_2m,relative_humidity_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
-      );
-      
-      if (!weatherResponse.ok) throw new Error('Weather API failed');
-      
-      const weatherData = await weatherResponse.json();
-      const current = weatherData.current;
-      const daily = weatherData.daily;
-      
-      // Weather code interpretation
-      const getWeatherDescription = (code: number) => {
-        const weatherCodes: Record<number, string> = {
-          0: 'Clear sky',
-          1: 'Mainly clear',
-          2: 'Partly cloudy',
-          3: 'Overcast',
-          45: 'Foggy',
-          48: 'Depositing rime fog',
-          51: 'Light drizzle',
-          53: 'Moderate drizzle',
-          55: 'Dense drizzle',
-          61: 'Slight rain',
-          63: 'Moderate rain',
-          65: 'Heavy rain',
-          71: 'Slight snow',
-          73: 'Moderate snow',
-          75: 'Heavy snow',
-          80: 'Slight rain showers',
-          81: 'Moderate rain showers',
-          82: 'Violent rain showers',
-          95: 'Thunderstorm',
-          96: 'Thunderstorm with slight hail',
-          99: 'Thunderstorm with heavy hail'
-        };
-        return weatherCodes[code] || 'Unknown weather condition';
-      };
-      
-      return {
-        source: 'weather',
-        location: `${name}, ${country}`,
-        current: {
-          temperature: current.temperature_2m,
-          humidity: current.relative_humidity_2m,
-          windSpeed: current.wind_speed_10m,
-          condition: getWeatherDescription(current.weather_code),
-          time: current.time
-        },
-        forecast: {
-          maxTemp: daily.temperature_2m_max[0],
-          minTemp: daily.temperature_2m_min[0],
-          condition: getWeatherDescription(daily.weather_code[0])
-        },
-        credibility: 0.95,
-        type: 'weather'
-      };
-    } catch (error) {
-      console.error('Weather search error:', error);
-      return {
-        source: 'weather_error',
-        error: error instanceof Error ? error.message : 'Weather service unavailable',
-        credibility: 0.1,
-        type: 'weather'
-      };
-    }
-  }
-
+  // Working API implementations
   private async searchWikipedia(topic: string) {
     try {
       const searchResponse = await fetch(
@@ -296,7 +230,7 @@ class FixedRealBackend {
       );
       
       if (!searchResponse.ok) {
-        throw new Error('Wikipedia search failed');
+        return null;
       }
       
       const data = await searchResponse.json();
@@ -304,60 +238,241 @@ class FixedRealBackend {
       return {
         source: 'wikipedia',
         title: data.title,
-        content: data.extract,
+        content: data.extract || 'No summary available',
         url: data.content_urls?.desktop?.page,
-        timestamp: new Date(),
-        credibility: 0.85,
+        credibility: 0.9,
         type: 'encyclopedia'
       };
     } catch (error) {
-      console.error('Wikipedia search error:', error);
+      console.error('Wikipedia error:', error);
+      return null;
+    }
+  }
+
+  private async searchWeather(location: string) {
+    try {
+      // Get coordinates
+      const geoResponse = await fetch(
+        `${this.geocodingAPI}?name=${encodeURIComponent(location)}&count=1&language=en&format=json`
+      );
+      
+      if (!geoResponse.ok) return null;
+      
+      const geoData = await geoResponse.json();
+      if (!geoData.results || geoData.results.length === 0) {
+        return null;
+      }
+      
+      const { latitude, longitude, name, country } = geoData.results[0];
+      
+      // Get weather
+      const weatherResponse = await fetch(
+        `${this.weatherAPI}?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`
+      );
+      
+      if (!weatherResponse.ok) return null;
+      
+      const weatherData = await weatherResponse.json();
+      const current = weatherData.current;
+      
+      const getWeatherDescription = (code: number) => {
+        const codes: Record<number, string> = {
+          0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
+          45: 'Foggy', 51: 'Light drizzle', 61: 'Light rain', 63: 'Moderate rain',
+          65: 'Heavy rain', 71: 'Light snow', 80: 'Rain showers', 95: 'Thunderstorm'
+        };
+        return codes[code] || 'Unknown weather';
+      };
+      
+      return {
+        source: 'weather',
+        location: `${name}, ${country}`,
+        temperature: current.temperature_2m,
+        condition: getWeatherDescription(current.weather_code),
+        humidity: current.relative_humidity_2m,
+        windSpeed: current.wind_speed_10m,
+        credibility: 0.95,
+        type: 'weather'
+      };
+    } catch (error) {
+      console.error('Weather error:', error);
       return null;
     }
   }
 
   private async searchNews(topic: string) {
-    if (!this.newsAPI) {
-      return null;
-    }
+    if (!this.newsAPI) return null;
 
     try {
       const response = await fetch(
-        `${this.newsAPI}/everything?q=${encodeURIComponent(topic)}&sortBy=relevancy&pageSize=3&apiKey=${process.env.NEWS_API_KEY}`
+        `${this.newsAPI}/everything?q=${encodeURIComponent(topic)}&sortBy=publishedAt&pageSize=3&apiKey=${process.env.NEWS_API_KEY}`
       );
       
-      if (!response.ok) throw new Error('News API failed');
+      if (!response.ok) return null;
       
       const data = await response.json();
       
       return {
         source: 'news',
-        articles: data.articles?.slice(0, 2).map((article: any) => ({
+        articles: data.articles?.slice(0, 3).map((article: any) => ({
           title: article.title,
-          content: article.description,
+          description: article.description,
           url: article.url,
           publishedAt: article.publishedAt,
-          source: article.source.name
+          sourceName: article.source.name
         })) || [],
-        credibility: 0.7,
-        type: 'current_events'
+        credibility: 0.8,
+        type: 'news'
       };
     } catch (error) {
-      console.error('News search error:', error);
+      console.error('News error:', error);
+      return null;
+    }
+  }
+
+  private async searchHackerNews(topic: string) {
+    try {
+      // Search HN using their API
+      const searchResponse = await fetch(
+        `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(topic)}&tags=story&hitsPerPage=3`
+      );
+      
+      if (!searchResponse.ok) return null;
+      
+      const data = await searchResponse.json();
+      
+      return {
+        source: 'hackernews',
+        stories: data.hits?.map((hit: any) => ({
+          title: hit.title,
+          url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+          points: hit.points,
+          numComments: hit.num_comments,
+          author: hit.author
+        })) || [],
+        credibility: 0.7,
+        type: 'tech_news'
+      };
+    } catch (error) {
+      console.error('HackerNews error:', error);
+      return null;
+    }
+  }
+
+  private async searchCrypto(topic: string) {
+    try {
+      // Search coins
+      const searchResponse = await fetch(
+        `${this.cryptoAPI}/search?query=${encodeURIComponent(topic)}`
+      );
+      
+      if (!searchResponse.ok) return null;
+      
+      const searchData = await searchResponse.json();
+      
+      if (searchData.coins?.length > 0) {
+        const coinId = searchData.coins[0].id;
+        
+        // Get price data
+        const priceResponse = await fetch(
+          `${this.cryptoAPI}/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
+        );
+        
+        if (priceResponse.ok) {
+          const priceData = await priceResponse.json();
+          const price = priceData[coinId];
+          
+          return {
+            source: 'crypto',
+            coin: searchData.coins[0],
+            price: price?.usd,
+            change24h: price?.usd_24h_change,
+            credibility: 0.8,
+            type: 'cryptocurrency'
+          };
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Crypto error:', error);
+      return null;
+    }
+  }
+
+  private async searchQuotes(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.quotesAPI}/quotes?tags=${encodeURIComponent(topic)}&limit=2`
+      );
+      
+      if (!response.ok) {
+        // Fallback to random quotes if no topic matches
+        const fallbackResponse = await fetch(`${this.quotesAPI}/quotes/random`);
+        if (fallbackResponse.ok) {
+          const quote = await fallbackResponse.json();
+          return {
+            source: 'quotes',
+            quotes: [quote],
+            credibility: 0.6,
+            type: 'wisdom'
+          };
+        }
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      return {
+        source: 'quotes',
+        quotes: data.results || [],
+        credibility: 0.7,
+        type: 'wisdom'
+      };
+    } catch (error) {
+      console.error('Quotes error:', error);
+      return null;
+    }
+  }
+
+  private async searchReddit(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.redditAPI}/search.json?q=${encodeURIComponent(topic)}&limit=3&sort=relevance`
+      );
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      
+      return {
+        source: 'reddit',
+        posts: data.data?.children?.slice(0, 2).map((child: any) => ({
+          title: child.data.title,
+          subreddit: child.data.subreddit,
+          score: child.data.score,
+          numComments: child.data.num_comments,
+          url: `https://reddit.com${child.data.permalink}`
+        })) || [],
+        credibility: 0.5,
+        type: 'social'
+      };
+    } catch (error) {
+      console.error('Reddit error:', error);
       return null;
     }
   }
 
   private consolidateResults(results: PromiseSettledResult<any>[]): ConsolidatedData {
     const consolidated: ConsolidatedData = {
-      sources: [] as string[],
-      documents: [] as Document[],
-      relationships: [] as any[],
+      sources: [],
+      documents: [],
+      relationships: [],
       domains: new Set<string>(),
       complexity: 0,
       confidence: 0,
       totalResults: 0,
-      inferenceChains: [] as string[]
+      inferenceChains: []
     };
 
     let validResults = 0;
@@ -368,190 +483,232 @@ class FixedRealBackend {
         consolidated.sources.push(data.source);
         validResults++;
 
-        // Process weather data
-        if (data.source === 'weather' && data.current) {
-          consolidated.documents.push({
-            id: 'weather-' + Date.now(),
-            score: 0.95,
-            preview: `Current weather in ${data.location}: ${data.current.temperature}°C, ${data.current.condition}`,
-            content: `Current weather in ${data.location}: Temperature ${data.current.temperature}°C, ${data.current.condition}, Humidity ${data.current.humidity}%, Wind speed ${data.current.windSpeed} km/h. Today's forecast: High ${data.forecast.maxTemp}°C, Low ${data.forecast.minTemp}°C, ${data.forecast.condition}.`,
-            meta: {
-              topic: 'weather',
-              category: 'current_conditions',
-              importance: 'high',
-              keywords: [data.location, 'weather', 'temperature'],
-              domain: 'meteorology'
+        // Process each data type
+        switch (data.source) {
+          case 'wikipedia':
+            if (data.content && data.content !== 'No summary available') {
+              consolidated.documents.push({
+                id: 'wiki-' + Date.now(),
+                score: 0.9,
+                preview: data.content.substring(0, 200) + '...',
+                content: data.content,
+                meta: {
+                  topic: 'encyclopedia',
+                  category: 'reference',
+                  importance: 'high',
+                  keywords: data.title?.split(' ') || [],
+                  domain: 'knowledge'
+                }
+              });
+              consolidated.domains.add('knowledge');
+              consolidated.complexity += 2;
             }
-          });
-          consolidated.domains.add('meteorology');
-          consolidated.complexity += 2;
-        }
+            break;
 
-        // Process weather error
-        if (data.source === 'weather_error') {
-          consolidated.documents.push({
-            id: 'weather-error-' + Date.now(),
-            score: 0.1,
-            preview: `Weather information unavailable: ${data.error}`,
-            content: `I couldn't retrieve current weather information: ${data.error}. Please check the location spelling or try again later.`,
-            meta: {
-              topic: 'weather',
-              category: 'error',
-              importance: 'low',
-              keywords: ['weather', 'error'],
-              domain: 'meteorology'
-            }
-          });
-          consolidated.domains.add('meteorology');
-          consolidated.complexity += 1;
-        }
-
-        // Process Wikipedia data
-        if (data.source === 'wikipedia' && data.content) {
-          consolidated.documents.push({
-            id: 'wiki-' + Date.now(),
-            score: 0.85,
-            preview: data.content.substring(0, 200) + '...',
-            content: data.content,
-            meta: {
-              topic: 'encyclopedia',
-              category: 'reference',
-              importance: 'high',
-              keywords: data.title?.split(' ') || [],
-              domain: 'knowledge'
-            }
-          });
-          consolidated.domains.add('encyclopedia');
-          consolidated.complexity += 2;
-        }
-
-        // Process news data
-        if (data.source === 'news' && data.articles) {
-          for (const article of data.articles || []) {
+          case 'weather':
             consolidated.documents.push({
-              id: 'news-' + Date.now() + Math.random(),
-              score: 0.7,
-              preview: article.content?.substring(0, 200) + '...' || article.title,
-              content: article.content || article.title,
+              id: 'weather-' + Date.now(),
+              score: 0.95,
+              preview: `Weather in ${data.location}: ${data.temperature}°C, ${data.condition}`,
+              content: `Current weather in ${data.location}: ${data.temperature}°C, ${data.condition}. Humidity: ${data.humidity}%, Wind speed: ${data.windSpeed} km/h`,
               meta: {
-                topic: 'current_events',
-                category: 'news',
-                importance: 'medium',
-                keywords: article.title.split(' ').slice(0, 5),
-                domain: 'current_events'
+                topic: 'weather',
+                category: 'current',
+                importance: 'high',
+                keywords: [data.location, 'weather', 'temperature'],
+                domain: 'meteorology'
               }
             });
-          }
-          consolidated.domains.add('current_events');
-          consolidated.complexity += 1;
+            consolidated.domains.add('meteorology');
+            consolidated.complexity += 2;
+            break;
+
+          case 'news':
+            for (const article of data.articles || []) {
+              consolidated.documents.push({
+                id: 'news-' + Date.now() + Math.random(),
+                score: 0.8,
+                preview: article.description?.substring(0, 200) + '...' || article.title,
+                content: `${article.title}. ${article.description || ''} (Source: ${article.sourceName})`,
+                meta: {
+                  topic: 'current_events',
+                  category: 'news',
+                  importance: 'high',
+                  keywords: article.title.split(' ').slice(0, 5),
+                  domain: 'news'
+                }
+              });
+            }
+            consolidated.domains.add('news');
+            consolidated.complexity += 2;
+            break;
+
+          case 'hackernews':
+            for (const story of data.stories || []) {
+              consolidated.documents.push({
+                id: 'hn-' + Date.now() + Math.random(),
+                score: 0.7,
+                preview: `HackerNews: ${story.title} (${story.points} points)`,
+                content: `${story.title} - ${story.points} points, ${story.numComments} comments on Hacker News`,
+                meta: {
+                  topic: 'technology',
+                  category: 'tech_news',
+                  importance: 'medium',
+                  keywords: story.title.split(' ').slice(0, 5),
+                  domain: 'technology'
+                }
+              });
+            }
+            consolidated.domains.add('technology');
+            consolidated.complexity += 1;
+            break;
+
+          case 'crypto':
+            if (data.coin && data.price) {
+              consolidated.documents.push({
+                id: 'crypto-' + Date.now(),
+                score: 0.8,
+                preview: `${data.coin.name} (${data.coin.symbol}): $${data.price}`,
+                content: `${data.coin.name} (${data.coin.symbol}) is currently trading at $${data.price}. 24h change: ${data.change24h?.toFixed(2)}%`,
+                meta: {
+                  topic: 'cryptocurrency',
+                  category: 'price',
+                  importance: 'medium',
+                  keywords: [data.coin.name, data.coin.symbol, 'crypto'],
+                  domain: 'finance'
+                }
+              });
+              consolidated.domains.add('finance');
+              consolidated.complexity += 2;
+            }
+            break;
+
+          case 'quotes':
+            for (const quote of data.quotes || []) {
+              consolidated.documents.push({
+                id: 'quote-' + Date.now() + Math.random(),
+                score: 0.6,
+                preview: `"${quote.content}" - ${quote.author}`,
+                content: `"${quote.content}" - ${quote.author}`,
+                meta: {
+                  topic: 'wisdom',
+                  category: 'quotes',
+                  importance: 'low',
+                  keywords: [quote.author],
+                  domain: 'philosophy'
+                }
+              });
+            }
+            consolidated.domains.add('philosophy');
+            consolidated.complexity += 1;
+            break;
+
+          case 'reddit':
+            for (const post of data.posts || []) {
+              consolidated.documents.push({
+                id: 'reddit-' + Date.now() + Math.random(),
+                score: 0.5,
+                preview: `r/${post.subreddit}: ${post.title.substring(0, 100)}...`,
+                content: `Discussion from r/${post.subreddit}: "${post.title}" (${post.score} upvotes, ${post.numComments} comments)`,
+                meta: {
+                  topic: 'social',
+                  category: 'discussion',
+                  importance: 'low',
+                  keywords: [post.subreddit],
+                  domain: 'social'
+                }
+              });
+            }
+            consolidated.domains.add('social');
+            consolidated.complexity += 1;
+            break;
         }
       }
     }
 
-    consolidated.confidence = validResults > 0 ? Math.min(0.95, validResults * 0.25 + 0.25) : 0.1;
+    consolidated.confidence = validResults > 0 ? Math.min(0.95, validResults * 0.2 + 0.3) : 0.1;
     consolidated.totalResults = consolidated.documents.length;
     consolidated.inferenceChains = consolidated.documents.slice(0, 3).map(doc => 
-      `${doc.meta.domain}: ${doc.meta.topic} → ${doc.meta.category}`
+      `${doc.meta.domain}: ${doc.meta.topic}`
     );
 
     return consolidated;
   }
 
-  private generateEnhancedAnswer(question: string, analysis: any, realData: ConsolidatedData): string {
+  private generateAnswer(question: string, analysis: any, realData: ConsolidatedData): string {
     if (realData.documents.length === 0) {
-      return "I searched across multiple data sources but couldn't find specific information about this topic. Please check if the query is correctly formatted or try rephrasing it.";
+      return "I searched multiple data sources but couldn't find specific information about this topic. The APIs might be temporarily unavailable or the query might need different keywords.";
     }
 
     const sortedDocs = realData.documents.sort((a, b) => b.score - a.score);
+    let answer = "";
+
+    // Use the best result as primary answer
     const primaryDoc = sortedDocs[0];
+    answer = primaryDoc.content;
 
-    // Handle weather-specific responses
-    if (primaryDoc.meta.domain === 'meteorology') {
-      if (primaryDoc.meta.category === 'error') {
-        return primaryDoc.content;
-      } else {
-        let answer = primaryDoc.content;
-        
-        // Add additional context if available
-        if (sortedDocs.length > 1) {
-          const additionalInfo = sortedDocs.slice(1, 2)
-            .filter(doc => doc.meta.domain !== 'meteorology')
-            .map(doc => doc.content.substring(0, 150))
-            .join(' ');
-          
-          if (additionalInfo) {
-            answer += `\n\nAdditional context: ${additionalInfo}`;
-          }
-        }
-        
-        answer += "\n\nWeather data provided by Open-Meteo, a free weather API service.";
-        return answer;
-      }
-    }
-
-    // Handle other types of responses
-    let answer = primaryDoc.content;
-
+    // Add supporting information if available
     if (sortedDocs.length > 1) {
-      const supportingDocs = sortedDocs.slice(1, 2);
+      const supportingDocs = sortedDocs.slice(1, 2)
+        .filter(doc => doc.meta.domain !== primaryDoc.meta.domain);
+      
       if (supportingDocs.length > 0) {
-        answer += `\n\nAdditional information: ${supportingDocs.map(doc => doc.content.substring(0, 150)).join(' ')}`;
+        answer += `\n\nAdditional information: ${supportingDocs[0].content}`;
       }
     }
 
-    if (realData.confidence > 0.8) {
-      answer += `\n\nInformation compiled from ${realData.sources.length} sources.`;
-    }
+    // Add source information
+    answer += `\n\nSources: ${realData.sources.join(', ')}`;
 
     return answer;
   }
 
-  private extractRelatedConcepts(realData: ConsolidatedData): string[] {
+  private extractConcepts(realData: ConsolidatedData): string[] {
     const concepts = new Set<string>();
     
     for (const doc of realData.documents) {
-      doc.meta.keywords.forEach((keyword: string) => {
-        if (keyword.length > 3) {
-          concepts.add(keyword);
-        }
+      doc.meta.keywords.forEach(keyword => {
+        if (keyword.length > 3) concepts.add(keyword);
       });
       concepts.add(doc.meta.domain);
-      concepts.add(doc.meta.category);
     }
     
     return Array.from(concepts).slice(0, 8);
   }
 
-  private generateSmartFollowUps(question: string, realData: ConsolidatedData): string[] {
+  private generateFollowUps(question: string, realData: ConsolidatedData): string[] {
     const followUps: string[] = [];
     const domains = Array.from(realData.domains);
     
     for (const domain of domains.slice(0, 2)) {
       switch (domain) {
         case 'meteorology':
-          followUps.push("What's the weather forecast for this week?");
-          followUps.push("How does this compare to typical weather patterns?");
+          followUps.push("What's the weather forecast for tomorrow?");
           break;
-        case 'encyclopedia':
+        case 'news':
+          followUps.push("What other recent news is there?");
+          break;
+        case 'technology':
+          followUps.push("What are the latest tech trends?");
+          break;
+        case 'finance':
+          followUps.push("What are other cryptocurrency prices?");
+          break;
+        default:
           followUps.push("Tell me more about this topic");
-          followUps.push("What are the key facts I should know?");
-          break;
-        case 'current_events':
-          followUps.push("What are the latest developments?");
-          break;
       }
     }
     
     if (followUps.length < 3) {
-      followUps.push("How does this relate to other topics?");
       followUps.push("Can you provide more details?");
+      followUps.push("How does this relate to current events?");
     }
     
     return followUps.slice(0, 4);
   }
 }
 
-const fixedBackend = new FixedRealBackend();
+const workingBackend = new WorkingAPIsBackend();
 
 export async function POST(request: NextRequest) {
   try {
@@ -564,13 +721,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await fixedBackend.query(question, options || {});
+    const result = await workingBackend.query(question, options || {});
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Fixed Backend API error:', error);
+    console.error('Working Backend API error:', error);
     return NextResponse.json(
       { 
-        error: 'Internal server error during data processing',
+        error: 'Internal server error',
         timestamp: new Date().toISOString()
       },
       { status: 500 }
@@ -581,18 +738,16 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: 'operational',
-    service: 'fixed-weather-backend',
-    version: '2.1.0',
-    dataSources: {
+    service: 'working-apis-backend',
+    version: '1.0.0',
+    workingAPIs: {
       wikipedia: 'active',
-      weather: 'active (Open-Meteo - no API key required)',
-      news: process.env.NEWS_API_KEY ? 'active' : 'inactive'
-    },
-    capabilities: {
-      currentWeather: true,
-      locationBasedQueries: true,
-      encyclopedicKnowledge: true,
-      currentEvents: process.env.NEWS_API_KEY ? true : false
+      weather: 'active (Open-Meteo)',
+      news: process.env.NEWS_API_KEY ? 'active (NewsAPI)' : 'inactive',
+      hackerNews: 'active (Algolia HN Search)',
+      crypto: 'active (CoinGecko)',
+      quotes: 'active (Quotable)',
+      reddit: 'active (Reddit JSON)'
     },
     timestamp: new Date().toISOString()
   });
