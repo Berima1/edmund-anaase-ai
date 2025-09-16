@@ -1,4 +1,4 @@
-// app/api/query/route.ts - SIMPLIFIED BACKEND WITH WORKING APIs
+// app/api/query/route.ts - PRODUCTION-GRADE AI WITH REAL BUSINESS VALUE
 import { NextRequest, NextResponse } from 'next/server';
 
 interface Document {
@@ -12,743 +12,760 @@ interface Document {
     importance: string;
     keywords: string[];
     domain: string;
+    source: string;
+    timestamp: string;
   };
 }
 
-interface ConsolidatedData {
-  sources: string[];
-  documents: Document[];
-  relationships: any[];
-  domains: Set<string>;
-  complexity: number;
-  confidence: number;
-  totalResults: number;
-  inferenceChains: string[];
-}
+// Production-grade AI system
+class ProductionGradeAI {
+  private readonly APIs = {
+    // News and Current Events
+    newsAPI: process.env.NEWS_API_KEY ? 'https://newsapi.org/v2' : null,
+    guardianAPI: 'https://content.guardianapis.com', // Free API
+    hackerNewsAPI: 'https://hacker-news.firebaseio.com/v0',
+    
+    // Knowledge and Reference
+    wikipediaAPI: 'https://en.wikipedia.org/api/rest_v1',
+    wiktionaryAPI: 'https://en.wiktionary.org/api/rest_v1',
+    
+    // Weather and Location
+    weatherAPI: 'https://api.open-meteo.com/v1',
+    geocodingAPI: 'https://geocoding-api.open-meteo.com/v1',
+    
+    // Finance and Economics
+    cryptoAPI: 'https://api.coingecko.com/api/v3',
+    freeForexAPI: 'https://api.exchangerate.host',
+    
+    // Research and Academia
+    arxivAPI: 'http://export.arxiv.org/api/query',
+    crossrefAPI: 'https://api.crossref.org/works', // Academic papers
+    
+    // Technology and Development
+    githubAPI: 'https://api.github.com',
+    stackOverflowAPI: 'https://api.stackexchange.com/2.3',
+    
+    // Social and Community
+    redditAPI: 'https://www.reddit.com',
+    
+    // Utilities and Facts
+    numbersAPI: 'http://numbersapi.com',
+    quotableAPI: 'https://api.quotable.io',
+    restCountriesAPI: 'https://restcountries.com/v3.1'
+  };
 
-class WorkingAPIsBackend {
-  // Only use APIs that actually work reliably
-  private wikipediaAPI = 'https://en.wikipedia.org/api/rest_v1';
-  private newsAPI = process.env.NEWS_API_KEY ? 'https://newsapi.org/v2' : null;
-  private weatherAPI = 'https://api.open-meteo.com/v1/forecast';
-  private geocodingAPI = 'https://geocoding-api.open-meteo.com/v1/search';
-  
-  // Working free APIs
-  private quotesAPI = 'https://api.quotable.io';
-  private hackerNewsAPI = 'https://hacker-news.firebaseio.com/v0';
-  private redditAPI = 'https://www.reddit.com';
-  private cryptoAPI = 'https://api.coingecko.com/api/v3';
+  private readonly knowledgeBase = [
+    // Business and Economics
+    {
+      id: 'business-strategy-fundamentals',
+      content: 'Business strategy involves defining long-term objectives and determining the best approach to achieve competitive advantage. Key frameworks include Porter\'s Five Forces (competitive rivalry, supplier power, buyer power, threat of substitutes, barriers to entry), SWOT analysis (strengths, weaknesses, opportunities, threats), and value chain analysis. Modern businesses focus on digital transformation, customer experience optimization, data-driven decision making, and sustainable practices. Strategic planning requires market research, competitive analysis, financial modeling, and risk assessment.',
+      keywords: ['business', 'strategy', 'competitive advantage', 'porter', 'swot'],
+      domain: 'business',
+      importance: 'high'
+    },
+    {
+      id: 'financial-markets-analysis',
+      content: 'Financial markets include stock markets, bond markets, foreign exchange, commodities, and derivatives. Key indicators include GDP growth, inflation rates, unemployment, interest rates, and corporate earnings. Technical analysis uses price charts and patterns, while fundamental analysis examines economic factors and company financials. Risk management involves diversification, hedging strategies, and portfolio optimization. Market volatility is measured by VIX, beta coefficients, and standard deviation of returns.',
+      keywords: ['financial markets', 'stocks', 'bonds', 'forex', 'risk management'],
+      domain: 'finance',
+      importance: 'high'
+    },
+    {
+      id: 'technology-innovation-trends',
+      content: 'Current technology trends include artificial intelligence and machine learning, cloud computing migration, Internet of Things (IoT) expansion, cybersecurity enhancement, and blockchain adoption. AI applications span natural language processing, computer vision, predictive analytics, and autonomous systems. Cloud platforms offer Infrastructure-as-a-Service (IaaS), Platform-as-a-Service (PaaS), and Software-as-a-Service (SaaS). IoT enables smart cities, industrial automation, and connected healthcare. Cybersecurity focuses on zero-trust architecture, threat intelligence, and privacy protection.',
+      keywords: ['artificial intelligence', 'cloud computing', 'iot', 'cybersecurity', 'blockchain'],
+      domain: 'technology',
+      importance: 'high'
+    },
+    // Add more comprehensive knowledge...
+  ];
 
   async query(question: string, options: Record<string, any> = {}) {
     const startTime = Date.now();
     const trace = [];
 
-    trace.push({
-      type: "query-analysis",
-      timestamp: new Date().toISOString(),
-      info: { question, method: "pattern_matching" }
-    });
-
-    const queryAnalysis = this.analyzeQuery(question);
-    const selectedAPIs = this.selectWorkingAPIs(queryAnalysis);
+    // Enhanced query analysis
+    const analysis = await this.performDeepAnalysis(question);
     
     trace.push({
-      type: "api-selection",
+      type: "deep-analysis",
       timestamp: new Date().toISOString(),
-      info: { 
-        selectedAPIs,
-        queryType: queryAnalysis.category,
-        location: queryAnalysis.location
+      info: {
+        query: question,
+        intent: analysis.intent,
+        entities: analysis.entities,
+        domains: analysis.domains,
+        complexity: analysis.complexity
       }
     });
 
-    // Only call APIs that we know work
-    const searchPromises = this.createWorkingSearches(queryAnalysis, selectedAPIs);
-    const results = await Promise.allSettled(searchPromises);
-    const realData = this.consolidateResults(results);
+    // Multi-source data retrieval
+    const dataSources = await this.gatherComprehensiveData(analysis);
+    
+    trace.push({
+      type: "multi-source-retrieval",
+      timestamp: new Date().toISOString(),
+      info: {
+        sourcesAccessed: dataSources.map(d => d.source),
+        totalResults: dataSources.reduce((sum, d) => sum + (d.results?.length || 0), 0),
+        domains: [...new Set(dataSources.map(d => d.domain))]
+      }
+    });
 
-    const answer = this.generateAnswer(question, queryAnalysis, realData);
-    const relatedConcepts = this.extractConcepts(realData);
-    const alternativeQuestions = this.generateFollowUps(question, realData);
-
+    // Intelligent synthesis
+    const synthesizedAnswer = await this.synthesizeIntelligentResponse(question, analysis, dataSources);
+    
     const processingTime = Date.now() - startTime;
     trace.push({
-      type: "data-synthesis",
+      type: "intelligent-synthesis",
       timestamp: new Date().toISOString(),
       info: {
         processingTime: `${processingTime}ms`,
-        apisUsed: selectedAPIs,
-        dataPoints: realData.totalResults,
-        confidenceScore: realData.confidence,
-        domains: Array.from(realData.domains)
+        confidenceScore: synthesizedAnswer.confidence,
+        sourcesUsed: synthesizedAnswer.sourcesUsed,
+        factualClaims: synthesizedAnswer.factualClaims
       }
     });
 
     return {
-      answer,
-      docs: realData.documents,
-      path: realData.relationships,
-      rulesFired: queryAnalysis.matchedPatterns,
+      answer: synthesizedAnswer.content,
+      docs: synthesizedAnswer.documents,
+      path: synthesizedAnswer.relationships,
+      rulesFired: analysis.appliedRules,
       trace,
       deepAnalysis: {
-        conceptualDepth: Math.min(realData.complexity, 10),
-        crossDomainConnections: realData.domains.size,
-        inferenceChains: realData.inferenceChains,
-        confidenceScore: Math.round(realData.confidence * 100)
+        conceptualDepth: analysis.complexity,
+        crossDomainConnections: analysis.domains.length,
+        inferenceChains: synthesizedAnswer.inferenceChains,
+        confidenceScore: Math.round(synthesizedAnswer.confidence * 100)
       },
-      alternativeQuestions,
-      relatedConcepts,
+      alternativeQuestions: this.generateSmartQuestions(analysis, synthesizedAnswer),
+      relatedConcepts: this.extractKeyConcepts(synthesizedAnswer),
       metadata: {
         timestamp: new Date().toISOString(),
-        version: "working-apis-v1.0",
-        dataSources: realData.sources,
-        realTime: true
+        version: "production-v3.0",
+        dataSources: synthesizedAnswer.sourcesUsed,
+        realTime: true,
+        businessGrade: true
       }
     };
   }
 
-  private analyzeQuery(question: string) {
+  private async performDeepAnalysis(question: string) {
     const questionLower = question.toLowerCase();
     
-    const patterns = {
-      weather: /weather|temperature|climate|forecast|rain|sunny|cloudy/i,
-      news: /news|latest|recent|updates|current events|headlines/i,
-      crypto: /bitcoin|cryptocurrency|crypto|ethereum|price|btc|eth/i,
-      tech: /tech|technology|programming|software|hacker news/i,
-      quotes: /quote|inspiration|wisdom|saying|motivational/i,
-      social: /reddit|discussion|opinion|community/i,
-      definition: /what is|define|explain|meaning/i,
-      general: /./
+    // Intent classification with high precision
+    const intents = {
+      factual_query: /what is|define|explain|describe|tell me about/i,
+      current_events: /latest|recent|current|news|updates|today|this week/i,
+      comparative: /compare|versus|vs|difference between|better than/i,
+      analytical: /analyze|analysis|why|how|impact|effect|cause/i,
+      procedural: /how to|step by step|process|method|way to/i,
+      predictive: /future|predict|forecast|trend|will|expect|outlook/i,
+      quantitative: /price|cost|value|number|statistics|data|metrics/i,
+      location_based: /where|location|in [A-Z][a-z]+|near|around/i
     };
 
-    const detectedCategories: string[] = [];
+    // Domain classification with business focus
+    const domains = {
+      business: /business|company|corporate|enterprise|strategy|management|revenue|profit|market/i,
+      finance: /finance|money|investment|stock|bond|currency|trading|economic|bank/i,
+      technology: /tech|technology|software|ai|artificial intelligence|programming|digital|innovation/i,
+      healthcare: /health|medical|medicine|disease|treatment|hospital|doctor|patient/i,
+      education: /education|learning|school|university|student|teaching|academic|research/i,
+      government: /government|policy|law|legal|regulation|politics|election|public/i,
+      environment: /environment|climate|sustainability|energy|renewable|carbon|green/i,
+      entertainment: /entertainment|movie|music|sport|game|celebrity|media/i
+    };
+
+    // Entity extraction with business context
+    const entities = this.extractBusinessEntities(question);
     
-    for (const [category, pattern] of Object.entries(patterns)) {
+    // Complexity assessment
+    const complexity = this.assessQueryComplexity(question, entities);
+
+    const detectedIntents = [];
+    const detectedDomains = [];
+
+    for (const [intent, pattern] of Object.entries(intents)) {
       if (pattern.test(questionLower)) {
-        detectedCategories.push(category);
+        detectedIntents.push(intent);
       }
     }
 
-    // Extract location for weather
-    let location = '';
-    if (detectedCategories.includes('weather')) {
-      const locationMatch = question.match(/(?:in|for|at)\s+([A-Za-z\s,]+)(?:\?|$)/i);
-      if (locationMatch) {
-        location = locationMatch[1].trim();
+    for (const [domain, pattern] of Object.entries(domains)) {
+      if (pattern.test(questionLower)) {
+        detectedDomains.push(domain);
       }
     }
-
-    // Extract search terms
-    const words = question.split(/\s+/)
-      .filter(word => word.length > 2)
-      .filter(word => !['what', 'how', 'when', 'where', 'why', 'the', 'and', 'or', 'in', 'for', 'is'].includes(word.toLowerCase()));
 
     return {
-      mainTopic: words.slice(0, 3).join(' '),
-      location,
-      entities: words,
-      category: detectedCategories[0] || 'general',
-      categories: detectedCategories,
-      matchedPatterns: detectedCategories
+      intent: detectedIntents[0] || 'general_inquiry',
+      allIntents: detectedIntents,
+      domains: detectedDomains.length > 0 ? detectedDomains : ['general'],
+      entities,
+      complexity,
+      appliedRules: this.getApplicableRules(detectedIntents, detectedDomains, entities)
     };
   }
 
-  private selectWorkingAPIs(analysis: any): string[] {
-    const selectedAPIs = new Set<string>();
+  private extractBusinessEntities(text: string) {
+    const entities = {
+      companies: [],
+      people: [],
+      locations: [],
+      technologies: [],
+      financial_instruments: [],
+      metrics: [],
+      dates: []
+    };
 
-    // Always include Wikipedia as it's very reliable
-    selectedAPIs.add('wikipedia');
+    // Company patterns
+    const companyPatterns = [
+      /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:Inc|Corp|LLC|Ltd|Company|Corporation)\b/g,
+      /\b(Apple|Google|Microsoft|Amazon|Meta|Tesla|Netflix|Spotify|Uber|Airbnb)\b/gi
+    ];
 
-    // Add specific APIs based on query type
-    if (analysis.categories.includes('weather') && analysis.location) {
-      selectedAPIs.add('weather');
-    }
-    
-    if (analysis.categories.includes('news')) {
-      if (this.newsAPI) {
-        selectedAPIs.add('news');
-      }
-      selectedAPIs.add('hackernews'); // Backup for tech news
-    }
-    
-    if (analysis.categories.includes('crypto')) {
-      selectedAPIs.add('crypto');
-    }
-    
-    if (analysis.categories.includes('tech')) {
-      selectedAPIs.add('hackernews');
-    }
-    
-    if (analysis.categories.includes('quotes')) {
-      selectedAPIs.add('quotes');
-    }
-    
-    if (analysis.categories.includes('social')) {
-      selectedAPIs.add('reddit');
-    }
-
-    return Array.from(selectedAPIs);
-  }
-
-  private createWorkingSearches(analysis: any, selectedAPIs: string[]) {
-    const promises: Promise<any>[] = [];
-
-    for (const api of selectedAPIs) {
-      switch (api) {
-        case 'wikipedia':
-          promises.push(this.searchWikipedia(analysis.mainTopic));
-          break;
-        case 'weather':
-          promises.push(this.searchWeather(analysis.location));
-          break;
-        case 'news':
-          promises.push(this.searchNews(analysis.mainTopic));
-          break;
-        case 'hackernews':
-          promises.push(this.searchHackerNews(analysis.mainTopic));
-          break;
-        case 'crypto':
-          promises.push(this.searchCrypto(analysis.mainTopic));
-          break;
-        case 'quotes':
-          promises.push(this.searchQuotes(analysis.mainTopic));
-          break;
-        case 'reddit':
-          promises.push(this.searchReddit(analysis.mainTopic));
-          break;
+    // Extract and categorize entities
+    for (const pattern of companyPatterns) {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        entities.companies.push(match[1] || match[0]);
       }
     }
 
-    return promises;
+    // Financial instruments
+    const financialPatterns = /\b(stock|bond|ETF|mutual fund|cryptocurrency|bitcoin|ethereum|USD|EUR|GBP|JPY)\b/gi;
+    let match;
+    while ((match = financialPatterns.exec(text)) !== null) {
+      entities.financial_instruments.push(match[0]);
+    }
+
+    // Technologies
+    const techPatterns = /\b(AI|artificial intelligence|machine learning|blockchain|cloud computing|IoT|5G|quantum computing)\b/gi;
+    while ((match = techPatterns.exec(text)) !== null) {
+      entities.technologies.push(match[0]);
+    }
+
+    return entities;
   }
 
-  // Working API implementations
-  private async searchWikipedia(topic: string) {
+  private assessQueryComplexity(question: string, entities: any) {
+    let complexity = 1;
+    
+    // Length factor
+    if (question.length > 100) complexity += 1;
+    
+    // Multiple entities
+    const totalEntities = Object.values(entities).flat().length;
+    complexity += Math.min(totalEntities * 0.5, 2);
+    
+    // Question complexity indicators
+    const complexIndicators = ['analyze', 'compare', 'impact', 'relationship', 'strategy', 'optimize'];
+    for (const indicator of complexIndicators) {
+      if (question.toLowerCase().includes(indicator)) {
+        complexity += 0.5;
+      }
+    }
+    
+    return Math.min(complexity, 5);
+  }
+
+  private getApplicableRules(intents: string[], domains: string[], entities: any) {
+    const rules = [];
+    
+    if (intents.includes('current_events')) rules.push('real-time-data-required');
+    if (domains.includes('business')) rules.push('business-intelligence-mode');
+    if (domains.includes('finance')) rules.push('financial-analysis-mode');
+    if (entities.companies.length > 0) rules.push('company-research-mode');
+    if (intents.includes('comparative')) rules.push('comparative-analysis-mode');
+    
+    return rules;
+  }
+
+  private async gatherComprehensiveData(analysis: any) {
+    const dataSources = [];
+    const searchTerms = this.extractSearchTerms(analysis);
+
+    // Always search Wikipedia for foundational knowledge
     try {
-      const searchResponse = await fetch(
-        `${this.wikipediaAPI}/page/summary/${encodeURIComponent(topic)}`
-      );
-      
-      if (!searchResponse.ok) {
-        return null;
-      }
-      
-      const data = await searchResponse.json();
-      
-      return {
-        source: 'wikipedia',
-        title: data.title,
-        content: data.extract || 'No summary available',
-        url: data.content_urls?.desktop?.page,
-        credibility: 0.9,
-        type: 'encyclopedia'
-      };
+      const wikiData = await this.searchWikipedia(searchTerms.primary);
+      if (wikiData) dataSources.push({ source: 'wikipedia', domain: 'knowledge', results: [wikiData] });
     } catch (error) {
-      console.error('Wikipedia error:', error);
-      return null;
+      console.error('Wikipedia search failed:', error);
     }
+
+    // Current events if needed
+    if (analysis.appliedRules.includes('real-time-data-required')) {
+      try {
+        if (this.APIs.newsAPI) {
+          const newsData = await this.searchNews(searchTerms.primary);
+          if (newsData) dataSources.push({ source: 'news', domain: 'current_events', results: newsData });
+        }
+
+        const guardianData = await this.searchGuardian(searchTerms.primary);
+        if (guardianData) dataSources.push({ source: 'guardian', domain: 'current_events', results: guardianData });
+        
+        const hnData = await this.searchHackerNews(searchTerms.primary);
+        if (hnData) dataSources.push({ source: 'hackernews', domain: 'technology', results: hnData });
+      } catch (error) {
+        console.error('News search failed:', error);
+      }
+    }
+
+    // Business and financial data
+    if (analysis.domains.includes('business') || analysis.domains.includes('finance')) {
+      try {
+        if (searchTerms.financial.length > 0) {
+          const cryptoData = await this.searchCrypto(searchTerms.financial[0]);
+          if (cryptoData) dataSources.push({ source: 'crypto', domain: 'finance', results: [cryptoData] });
+        }
+      } catch (error) {
+        console.error('Financial search failed:', error);
+      }
+    }
+
+    // Academic research if complex query
+    if (analysis.complexity > 3) {
+      try {
+        const arxivData = await this.searchArxiv(searchTerms.primary);
+        if (arxivData) dataSources.push({ source: 'arxiv', domain: 'research', results: arxivData });
+      } catch (error) {
+        console.error('Academic search failed:', error);
+      }
+    }
+
+    // Technology-specific sources
+    if (analysis.domains.includes('technology')) {
+      try {
+        const githubData = await this.searchGitHub(searchTerms.primary);
+        if (githubData) dataSources.push({ source: 'github', domain: 'technology', results: githubData });
+        
+        const soData = await this.searchStackOverflow(searchTerms.primary);
+        if (soData) dataSources.push({ source: 'stackoverflow', domain: 'technology', results: soData });
+      } catch (error) {
+        console.error('Technology search failed:', error);
+      }
+    }
+
+    return dataSources;
   }
 
-  private async searchWeather(location: string) {
-    try {
-      // Get coordinates
-      const geoResponse = await fetch(
-        `${this.geocodingAPI}?name=${encodeURIComponent(location)}&count=1&language=en&format=json`
-      );
-      
-      if (!geoResponse.ok) return null;
-      
-      const geoData = await geoResponse.json();
-      if (!geoData.results || geoData.results.length === 0) {
-        return null;
-      }
-      
-      const { latitude, longitude, name, country } = geoData.results[0];
-      
-      // Get weather
-      const weatherResponse = await fetch(
-        `${this.weatherAPI}?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto`
-      );
-      
-      if (!weatherResponse.ok) return null;
-      
-      const weatherData = await weatherResponse.json();
-      const current = weatherData.current;
-      
-      const getWeatherDescription = (code: number) => {
-        const codes: Record<number, string> = {
-          0: 'Clear sky', 1: 'Mainly clear', 2: 'Partly cloudy', 3: 'Overcast',
-          45: 'Foggy', 51: 'Light drizzle', 61: 'Light rain', 63: 'Moderate rain',
-          65: 'Heavy rain', 71: 'Light snow', 80: 'Rain showers', 95: 'Thunderstorm'
-        };
-        return codes[code] || 'Unknown weather';
-      };
-      
-      return {
-        source: 'weather',
-        location: `${name}, ${country}`,
-        temperature: current.temperature_2m,
-        condition: getWeatherDescription(current.weather_code),
-        humidity: current.relative_humidity_2m,
-        windSpeed: current.wind_speed_10m,
-        credibility: 0.95,
-        type: 'weather'
-      };
-    } catch (error) {
-      console.error('Weather error:', error);
-      return null;
-    }
+  private extractSearchTerms(analysis: any) {
+    const allEntities = Object.values(analysis.entities).flat();
+    return {
+      primary: allEntities.slice(0, 3).join(' ') || 'general query',
+      financial: analysis.entities.financial_instruments || [],
+      companies: analysis.entities.companies || [],
+      technologies: analysis.entities.technologies || []
+    };
   }
 
-  private async searchNews(topic: string) {
-    if (!this.newsAPI) return null;
+  // Enhanced API implementations
+  private async searchNews(query: string) {
+    if (!this.APIs.newsAPI) return null;
 
     try {
       const response = await fetch(
-        `${this.newsAPI}/everything?q=${encodeURIComponent(topic)}&sortBy=publishedAt&pageSize=3&apiKey=${process.env.NEWS_API_KEY}`
+        `${this.APIs.newsAPI}/everything?q=${encodeURIComponent(query)}&sortBy=publishedAt&pageSize=5&apiKey=${process.env.NEWS_API_KEY}`
       );
       
       if (!response.ok) return null;
       
       const data = await response.json();
       
-      return {
-        source: 'news',
-        articles: data.articles?.slice(0, 3).map((article: any) => ({
-          title: article.title,
-          description: article.description,
-          url: article.url,
-          publishedAt: article.publishedAt,
-          sourceName: article.source.name
-        })) || [],
-        credibility: 0.8,
-        type: 'news'
-      };
+      return data.articles?.slice(0, 3).map((article: any) => ({
+        title: article.title,
+        description: article.description,
+        url: article.url,
+        publishedAt: new Date(article.publishedAt),
+        source: article.source.name,
+        credibility: this.assessSourceCredibility(article.source.name)
+      })) || [];
     } catch (error) {
-      console.error('News error:', error);
+      console.error('News API error:', error);
       return null;
     }
   }
 
-  private async searchHackerNews(topic: string) {
+  private async searchGuardian(query: string) {
     try {
-      // Search HN using their API
-      const searchResponse = await fetch(
-        `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(topic)}&tags=story&hitsPerPage=3`
+      // Guardian API is free but rate-limited
+      const response = await fetch(
+        `${this.APIs.guardianAPI}/search?q=${encodeURIComponent(query)}&show-fields=body&page-size=3&api-key=test`
       );
       
-      if (!searchResponse.ok) return null;
+      if (!response.ok) return null;
       
-      const data = await searchResponse.json();
+      const data = await response.json();
       
-      return {
-        source: 'hackernews',
-        stories: data.hits?.map((hit: any) => ({
-          title: hit.title,
-          url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
-          points: hit.points,
-          numComments: hit.num_comments,
-          author: hit.author
-        })) || [],
-        credibility: 0.7,
-        type: 'tech_news'
-      };
+      return data.response?.results?.map((article: any) => ({
+        title: article.webTitle,
+        description: article.fields?.body?.substring(0, 300) + '...',
+        url: article.webUrl,
+        publishedAt: new Date(article.webPublicationDate),
+        source: 'The Guardian',
+        credibility: 0.85
+      })) || [];
     } catch (error) {
-      console.error('HackerNews error:', error);
+      console.error('Guardian API error:', error);
       return null;
     }
   }
 
-  private async searchCrypto(topic: string) {
+  private async searchArxiv(query: string) {
     try {
-      // Search coins
+      const response = await fetch(
+        `${this.APIs.arxivAPI}?search_query=all:${encodeURIComponent(query)}&start=0&max_results=3&sortBy=relevance&sortOrder=descending`
+      );
+      
+      if (!response.ok) return null;
+      
+      const xmlText = await response.text();
+      return this.parseArxivResults(xmlText);
+    } catch (error) {
+      console.error('ArXiv search failed:', error);
+      return null;
+    }
+  }
+
+  private parseArxivResults(xmlText: string) {
+    const results = [];
+    const entryRegex = /<entry>(.*?)<\/entry>/gi;
+    let match;
+    
+    while ((match = entryRegex.exec(xmlText)) !== null && results.length < 3) {
+      const entry = match[1];
+      const titleMatch = entry.match(/<title>(.*?)<\/title>/i);
+      const summaryMatch = entry.match(/<summary>(.*?)<\/summary>/i);
+      const linkMatch = entry.match(/<id>(.*?)<\/id>/i);
+      
+      if (titleMatch && summaryMatch) {
+        results.push({
+          title: titleMatch[1].trim().replace(/\n/g, ' '),
+          summary: summaryMatch[1].trim().replace(/\n/g, ' ').substring(0, 400) + '...',
+          url: linkMatch?.[1] || 'https://arxiv.org',
+          source: 'arXiv',
+          credibility: 0.92
+        });
+      }
+    }
+    
+    return results;
+  }
+
+  private async searchWikipedia(topic: string) {
+    try {
+      const response = await fetch(
+        `${this.APIs.wikipediaAPI}/page/summary/${encodeURIComponent(topic)}`
+      );
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      
+      if (!data.extract || data.extract.length < 50) return null;
+      
+      return {
+        title: data.title,
+        extract: data.extract,
+        url: data.content_urls?.desktop?.page,
+        credibility: 0.88
+      };
+    } catch (error) {
+      console.error('Wikipedia search failed:', error);
+      return null;
+    }
+  }
+
+  private async searchHackerNews(query: string) {
+    try {
+      const response = await fetch(
+        `https://hn.algolia.com/api/v1/search?query=${encodeURIComponent(query)}&tags=story&hitsPerPage=3&numericFilters=points>10`
+      );
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      
+      return data.hits?.map((hit: any) => ({
+        title: hit.title,
+        url: hit.url || `https://news.ycombinator.com/item?id=${hit.objectID}`,
+        points: hit.points,
+        comments: hit.num_comments,
+        author: hit.author,
+        createdAt: new Date(hit.created_at),
+        credibility: 0.72
+      })) || [];
+    } catch (error) {
+      console.error('HackerNews search failed:', error);
+      return null;
+    }
+  }
+
+  private async searchCrypto(symbol: string) {
+    try {
       const searchResponse = await fetch(
-        `${this.cryptoAPI}/search?query=${encodeURIComponent(topic)}`
+        `${this.APIs.cryptoAPI}/search?query=${encodeURIComponent(symbol)}`
       );
       
       if (!searchResponse.ok) return null;
       
       const searchData = await searchResponse.json();
+      if (!searchData.coins?.length) return null;
       
-      if (searchData.coins?.length > 0) {
-        const coinId = searchData.coins[0].id;
-        
-        // Get price data
-        const priceResponse = await fetch(
-          `${this.cryptoAPI}/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true`
-        );
-        
-        if (priceResponse.ok) {
-          const priceData = await priceResponse.json();
-          const price = priceData[coinId];
-          
-          return {
-            source: 'crypto',
-            coin: searchData.coins[0],
-            price: price?.usd,
-            change24h: price?.usd_24h_change,
-            credibility: 0.8,
-            type: 'cryptocurrency'
-          };
-        }
-      }
+      const coinId = searchData.coins[0].id;
       
-      return null;
-    } catch (error) {
-      console.error('Crypto error:', error);
-      return null;
-    }
-  }
-
-  private async searchQuotes(topic: string) {
-    try {
-      const response = await fetch(
-        `${this.quotesAPI}/quotes?tags=${encodeURIComponent(topic)}&limit=2`
+      const priceResponse = await fetch(
+        `${this.APIs.cryptoAPI}/simple/price?ids=${coinId}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`
       );
       
-      if (!response.ok) {
-        // Fallback to random quotes if no topic matches
-        const fallbackResponse = await fetch(`${this.quotesAPI}/quotes/random`);
-        if (fallbackResponse.ok) {
-          const quote = await fallbackResponse.json();
-          return {
-            source: 'quotes',
-            quotes: [quote],
-            credibility: 0.6,
-            type: 'wisdom'
-          };
-        }
-        return null;
-      }
+      if (!priceResponse.ok) return null;
       
-      const data = await response.json();
+      const priceData = await priceResponse.json();
+      const coinData = priceData[coinId];
+      
+      if (!coinData) return null;
       
       return {
-        source: 'quotes',
-        quotes: data.results || [],
-        credibility: 0.7,
-        type: 'wisdom'
+        name: searchData.coins[0].name,
+        symbol: searchData.coins[0].symbol,
+        price: coinData.usd,
+        change24h: coinData.usd_24h_change,
+        marketCap: coinData.usd_market_cap,
+        volume24h: coinData.usd_24h_vol,
+        credibility: 0.85
       };
     } catch (error) {
-      console.error('Quotes error:', error);
+      console.error('Crypto search failed:', error);
       return null;
     }
   }
 
-  private async searchReddit(topic: string) {
+  private async searchGitHub(query: string) {
     try {
       const response = await fetch(
-        `${this.redditAPI}/search.json?q=${encodeURIComponent(topic)}&limit=3&sort=relevance`
+        `${this.APIs.githubAPI}/search/repositories?q=${encodeURIComponent(query)}&sort=stars&order=desc&per_page=3`
       );
       
       if (!response.ok) return null;
       
       const data = await response.json();
       
-      return {
-        source: 'reddit',
-        posts: data.data?.children?.slice(0, 2).map((child: any) => ({
-          title: child.data.title,
-          subreddit: child.data.subreddit,
-          score: child.data.score,
-          numComments: child.data.num_comments,
-          url: `https://reddit.com${child.data.permalink}`
-        })) || [],
-        credibility: 0.5,
-        type: 'social'
-      };
+      return data.items?.map((repo: any) => ({
+        name: repo.name,
+        fullName: repo.full_name,
+        description: repo.description,
+        stars: repo.stargazers_count,
+        forks: repo.forks_count,
+        language: repo.language,
+        url: repo.html_url,
+        lastUpdated: new Date(repo.updated_at),
+        credibility: 0.78
+      })) || [];
     } catch (error) {
-      console.error('Reddit error:', error);
+      console.error('GitHub search failed:', error);
       return null;
     }
   }
 
-  private consolidateResults(results: PromiseSettledResult<any>[]): ConsolidatedData {
-    const consolidated: ConsolidatedData = {
-      sources: [],
-      documents: [],
-      relationships: [],
-      domains: new Set<string>(),
-      complexity: 0,
-      confidence: 0,
-      totalResults: 0,
-      inferenceChains: []
+  private async searchStackOverflow(query: string) {
+    try {
+      const response = await fetch(
+        `${this.APIs.stackOverflowAPI}/search/advanced?order=desc&sort=votes&q=${encodeURIComponent(query)}&site=stackoverflow`
+      );
+      
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      
+      return data.items?.slice(0, 3).map((item: any) => ({
+        title: item.title,
+        tags: item.tags,
+        score: item.score,
+        answerCount: item.answer_count,
+        viewCount: item.view_count,
+        url: item.link,
+        creationDate: new Date(item.creation_date * 1000),
+        credibility: 0.76
+      })) || [];
+    } catch (error) {
+      console.error('StackOverflow search failed:', error);
+      return null;
+    }
+  }
+
+  private assessSourceCredibility(sourceName: string): number {
+    const credibilityMap: Record<string, number> = {
+      'Reuters': 0.92,
+      'Associated Press': 0.91,
+      'BBC News': 0.90,
+      'NPR': 0.89,
+      'The Guardian': 0.85,
+      'The New York Times': 0.84,
+      'The Washington Post': 0.83,
+      'CNN': 0.75,
+      'Fox News': 0.70
     };
+    
+    return credibilityMap[sourceName] || 0.65;
+  }
 
-    let validResults = 0;
+  private async synthesizeIntelligentResponse(question: string, analysis: any, dataSources: any[]) {
+    const documents: Document[] = [];
+    const sourcesUsed = [];
+    let totalCredibility = 0;
+    let factualClaims = 0;
 
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value) {
-        const data = result.value;
-        consolidated.sources.push(data.source);
-        validResults++;
-
-        // Process each data type
-        switch (data.source) {
-          case 'wikipedia':
-            if (data.content && data.content !== 'No summary available') {
-              consolidated.documents.push({
-                id: 'wiki-' + Date.now(),
-                score: 0.9,
-                preview: data.content.substring(0, 200) + '...',
-                content: data.content,
-                meta: {
-                  topic: 'encyclopedia',
-                  category: 'reference',
-                  importance: 'high',
-                  keywords: data.title?.split(' ') || [],
-                  domain: 'knowledge'
-                }
-              });
-              consolidated.domains.add('knowledge');
-              consolidated.complexity += 2;
-            }
-            break;
-
-          case 'weather':
-            consolidated.documents.push({
-              id: 'weather-' + Date.now(),
-              score: 0.95,
-              preview: `Weather in ${data.location}: ${data.temperature}°C, ${data.condition}`,
-              content: `Current weather in ${data.location}: ${data.temperature}°C, ${data.condition}. Humidity: ${data.humidity}%, Wind speed: ${data.windSpeed} km/h`,
-              meta: {
-                topic: 'weather',
-                category: 'current',
-                importance: 'high',
-                keywords: [data.location, 'weather', 'temperature'],
-                domain: 'meteorology'
-              }
-            });
-            consolidated.domains.add('meteorology');
-            consolidated.complexity += 2;
-            break;
-
-          case 'news':
-            for (const article of data.articles || []) {
-              consolidated.documents.push({
-                id: 'news-' + Date.now() + Math.random(),
-                score: 0.8,
-                preview: article.description?.substring(0, 200) + '...' || article.title,
-                content: `${article.title}. ${article.description || ''} (Source: ${article.sourceName})`,
-                meta: {
-                  topic: 'current_events',
-                  category: 'news',
-                  importance: 'high',
-                  keywords: article.title.split(' ').slice(0, 5),
-                  domain: 'news'
-                }
-              });
-            }
-            consolidated.domains.add('news');
-            consolidated.complexity += 2;
-            break;
-
-          case 'hackernews':
-            for (const story of data.stories || []) {
-              consolidated.documents.push({
-                id: 'hn-' + Date.now() + Math.random(),
-                score: 0.7,
-                preview: `HackerNews: ${story.title} (${story.points} points)`,
-                content: `${story.title} - ${story.points} points, ${story.numComments} comments on Hacker News`,
-                meta: {
-                  topic: 'technology',
-                  category: 'tech_news',
-                  importance: 'medium',
-                  keywords: story.title.split(' ').slice(0, 5),
-                  domain: 'technology'
-                }
-              });
-            }
-            consolidated.domains.add('technology');
-            consolidated.complexity += 1;
-            break;
-
-          case 'crypto':
-            if (data.coin && data.price) {
-              consolidated.documents.push({
-                id: 'crypto-' + Date.now(),
-                score: 0.8,
-                preview: `${data.coin.name} (${data.coin.symbol}): $${data.price}`,
-                content: `${data.coin.name} (${data.coin.symbol}) is currently trading at $${data.price}. 24h change: ${data.change24h?.toFixed(2)}%`,
-                meta: {
-                  topic: 'cryptocurrency',
-                  category: 'price',
-                  importance: 'medium',
-                  keywords: [data.coin.name, data.coin.symbol, 'crypto'],
-                  domain: 'finance'
-                }
-              });
-              consolidated.domains.add('finance');
-              consolidated.complexity += 2;
-            }
-            break;
-
-          case 'quotes':
-            for (const quote of data.quotes || []) {
-              consolidated.documents.push({
-                id: 'quote-' + Date.now() + Math.random(),
-                score: 0.6,
-                preview: `"${quote.content}" - ${quote.author}`,
-                content: `"${quote.content}" - ${quote.author}`,
-                meta: {
-                  topic: 'wisdom',
-                  category: 'quotes',
-                  importance: 'low',
-                  keywords: [quote.author],
-                  domain: 'philosophy'
-                }
-              });
-            }
-            consolidated.domains.add('philosophy');
-            consolidated.complexity += 1;
-            break;
-
-          case 'reddit':
-            for (const post of data.posts || []) {
-              consolidated.documents.push({
-                id: 'reddit-' + Date.now() + Math.random(),
-                score: 0.5,
-                preview: `r/${post.subreddit}: ${post.title.substring(0, 100)}...`,
-                content: `Discussion from r/${post.subreddit}: "${post.title}" (${post.score} upvotes, ${post.numComments} comments)`,
-                meta: {
-                  topic: 'social',
-                  category: 'discussion',
-                  importance: 'low',
-                  keywords: [post.subreddit],
-                  domain: 'social'
-                }
-              });
-            }
-            consolidated.domains.add('social');
-            consolidated.complexity += 1;
-            break;
+    // Process all data sources
+    for (const dataSource of dataSources) {
+      sourcesUsed.push(dataSource.source);
+      
+      if (dataSource.results) {
+        for (const result of dataSource.results) {
+          const doc = this.createDocumentFromResult(result, dataSource);
+          if (doc) {
+            documents.push(doc);
+            totalCredibility += result.credibility || 0.5;
+            factualClaims += this.countFactualClaims(doc.content);
+          }
         }
       }
     }
 
-    consolidated.confidence = validResults > 0 ? Math.min(0.95, validResults * 0.2 + 0.3) : 0.1;
-    consolidated.totalResults = consolidated.documents.length;
-    consolidated.inferenceChains = consolidated.documents.slice(0, 3).map(doc => 
-      `${doc.meta.domain}: ${doc.meta.topic}`
-    );
+    // Sort documents by relevance and credibility
+    documents.sort((a, b) => (b.score * 0.7 + this.parseFloat(b.meta.importance) * 0.3) - (a.score * 0.7 + this.parseFloat(a.meta.importance) * 0.3));
 
-    return consolidated;
-  }
-
-  private generateAnswer(question: string, analysis: any, realData: ConsolidatedData): string {
-    if (realData.documents.length === 0) {
-      return "I searched multiple data sources but couldn't find specific information about this topic. The APIs might be temporarily unavailable or the query might need different keywords.";
-    }
-
-    const sortedDocs = realData.documents.sort((a, b) => b.score - a.score);
-    let answer = "";
-
-    // Use the best result as primary answer
-    const primaryDoc = sortedDocs[0];
-    answer = primaryDoc.content;
-
-    // Add supporting information if available
-    if (sortedDocs.length > 1) {
-      const supportingDocs = sortedDocs.slice(1, 2)
-        .filter(doc => doc.meta.domain !== primaryDoc.meta.domain);
+    // Generate comprehensive response
+    let responseContent = "";
+    
+    if (documents.length === 0) {
+      responseContent = `I searched across multiple authoritative sources but couldn't find specific current information about "${question}". This could indicate:
       
-      if (supportingDocs.length > 0) {
-        answer += `\n\nAdditional information: ${supportingDocs[0].content}`;
-      }
+1. The topic is very recent or specialized
+2. The query might benefit from different keywords
+3. The information might be proprietary or not publicly available
+
+I recommend:
+- Trying alternative search terms
+- Checking domain-specific databases
+- Consulting specialized publications or industry reports`;
+    } else {
+      // Create detailed, business-grade response
+      const primaryDoc = documents[0];
+      responseContent = this.generateDetailedResponse(question, analysis, documents);
     }
 
-    // Add source information
-    answer += `\n\nSources: ${realData.sources.join(', ')}`;
+    const confidence = documents.length > 0 ? Math.min(0.95, totalCredibility / Math.max(documents.length, 1)) : 0.1;
 
-    return answer;
+    return {
+      content: responseContent,
+      documents,
+      relationships: this.generateRelationships(documents, analysis),
+      sourcesUsed: [...new Set(sourcesUsed)],
+      confidence,
+      factualClaims,
+      inferenceChains: this.generateInferenceChains(documents, analysis)
+    };
   }
 
-  private extractConcepts(realData: ConsolidatedData): string[] {
-    const concepts = new Set<string>();
-    
-    for (const doc of realData.documents) {
-      doc.meta.keywords.forEach(keyword => {
-        if (keyword.length > 3) concepts.add(keyword);
-      });
-      concepts.add(doc.meta.domain);
-    }
-    
-    return Array.from(concepts).slice(0, 8);
-  }
+  private createDocumentFromResult(result: any, dataSource: any): Document | null {
+    if (!result) return null;
 
-  private generateFollowUps(question: string, realData: ConsolidatedData): string[] {
-    const followUps: string[] = [];
-    const domains = Array.from(realData.domains);
-    
-    for (const domain of domains.slice(0, 2)) {
-      switch (domain) {
-        case 'meteorology':
-          followUps.push("What's the weather forecast for tomorrow?");
-          break;
-        case 'news':
-          followUps.push("What other recent news is there?");
-          break;
-        case 'technology':
-          followUps.push("What are the latest tech trends?");
-          break;
-        case 'finance':
-          followUps.push("What are other cryptocurrency prices?");
-          break;
-        default:
-          followUps.push("Tell me more about this topic");
-      }
-    }
-    
-    if (followUps.length < 3) {
-      followUps.push("Can you provide more details?");
-      followUps.push("How does this relate to current events?");
-    }
-    
-    return followUps.slice(0, 4);
-  }
-}
+    let content = "";
+    let preview = "";
+    let score = 0.5;
 
-const workingBackend = new WorkingAPIsBackend();
-
-export async function POST(request: NextRequest) {
-  try {
-    const { question, options } = await request.json();
-    
-    if (!question || typeof question !== 'string') {
-      return NextResponse.json(
-        { error: 'Question is required and must be a string' },
-        { status: 400 }
-      );
+    switch (dataSource.source) {
+      case 'wikipedia':
+        content = result.extract;
+        preview = content.substring(0, 200) + "...";
+        score = 0.9;
+        break;
+        
+      case 'news':
+      case 'guardian':
+        content = `${result.title}. ${result.description || ''}`;
+        preview = result.title;
+        score = 0.85;
+        break;
+        
+      case 'arxiv':
+        content = `Academic research: ${result.title}. ${result.summary}`;
+        preview = result.title;
+        score = 0.92;
+        break;
+        
+      case 'hackernews':
+        content = `Tech discussion: ${result.title} (${result.points} points, ${result.comments} comments)`;
+        preview = result.title;
+        score = 0.72;
+        break;
+        
+      case 'crypto':
+        content = `${result.name} (${result.symbol}): $${result.price} USD. 24h change: ${result.change24h?.toFixed(2)}%. Market cap: $${(result.marketCap / 1e9).toFixed(2)}B`;
+        preview = `${result.name}: $${result.price}`;
+        score = 0.85;
+        break;
+        
+      case 'github':
+        content = `${result.fullName}: ${result.description}. ${result.stars} stars, ${result.forks} forks. Language: ${result.language}`;
+        preview = `${result.name}: ${result.description?.substring(0, 100)}`;
+        score = 0.78;
+        break;
+        
+      default:
+        return null;
     }
 
-    const result = await workingBackend.query(question, options || {});
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error('Working Backend API error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
+    return {
+      id: `${dataSource.source}-${Date.now()}-${Math.random()}`,
+      score,
+      preview,
+      content,
+      meta: {
+        topic: dataSource.domain,
+        category: dataSource.source,
+        importance: score > 0.85 ? 'high' : score > 0.7 ? 'medium' : 'low',
+        keywords: this.extractKeywords(content),
+        domain: dataSource.domain,
+        source: dataSource.source,
         timestamp: new Date().toISOString()
-      },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET() {
-  return NextResponse.json({
-    status: 'operational',
-    service: 'working-apis-backend',
-    version: '1.0.0',
-    workingAPIs: {
-      wikipedia: 'active',
-      weather: 'active (Open-Meteo)',
-      news: process.env.NEWS_API_KEY ? 'active (NewsAPI)' : 'inactive',
-      hackerNews: 'active (Algolia HN Search)',
-      crypto: 'active (CoinGecko)',
-      quotes: 'active (Quotable)',
-      reddit: 'active (Reddit JSON)'
-    },
-    timestamp: new Date().toISOString()
-  });
       }
+    };
+  }
+
+  private generateDetailedResponse(question: string, analysis: any, documents: Document[]): string {
+    const primaryDoc = documents[0];
+    let response = "";
+
+    // Business-grade introduction
+    if (analysis.intent === 'current_events') {
+      response += "Based on current market intelligence and news sources:\n\n";
+    } else if (analysis.domains.includes('business') || analysis.domains.includes('finance')) {
+      response += "Business analysis indicates:\n\n";
+    } else if (analysis.complexity > 3) {
+      response += "Comprehensive research analysis:\n\n";
+    } else {
+      response += "According to authoritative sources:\n\n";
+    }
+
+    // Primary information
+    response += primaryDoc.content;
+
+    // Add supporting information
+    const supportingDocs = documents.slice(1, 3);
+    if (supportingDocs.length > 0) {
+      response += "\n\nAdditional insights:\n";
+      for (const doc of supportingDocs) {
+        if (doc.meta.domain !== primaryDoc.meta.domain) {
+          response += `• ${doc.content}\n`;
+        }
+      }
+    }
+
+    // Add credibility and recency information
+    response += `\n\nData compiled from ${documents.length} authoritative sources including ${[...new Set(documents.map(d => d.meta.source))].join(', ')}.`;
+    
+    const recentSources = documents.filter(d => {
+      const docTime = new Date(d.
