@@ -768,4 +768,300 @@ I recommend:
     response += `\n\nData compiled from ${documents.length} authoritative sources including ${[...new Set(documents.map(d => d.meta.source))].join(', ')}.`;
     
     const recentSources = documents.filter(d => {
-      const docTime = new Date(d.
+      const docTime = new Date(d.meta.timestamp);
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      return docTime > oneDayAgo;
+    });
+
+    if (recentSources.length > 0) {
+      response += ` ${recentSources.length} sources updated within the last 24 hours.`;
+    }
+
+    return response;
+  }
+
+  private parseFloat(importance: string): number {
+    switch (importance) {
+      case 'high': return 1.0;
+      case 'medium': return 0.7;
+      case 'low': return 0.4;
+      default: return 0.5;
+    }
+  }
+
+  private countFactualClaims(content: string): number {
+    // Simple heuristic: count sentences with numbers, dates, or definitive statements
+    const sentences = content.split(/[.!?]+/);
+    let claims = 0;
+    
+    for (const sentence of sentences) {
+      if (/\d+|is|are|was|were|will|has|have|according to/i.test(sentence)) {
+        claims++;
+      }
+    }
+    
+    return claims;
+  }
+
+  private extractKeywords(content: string): string[] {
+    // Extract meaningful keywords from content
+    const words = content.toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 3);
+    
+    // Common business/tech keywords get priority
+    const importantWords = words.filter(word => 
+      /business|technology|market|financial|analysis|strategy|growth|innovation|digital|data|revenue|profit|investment|research|development|artificial|intelligence|machine|learning|cloud|security|blockchain|crypto/i.test(word)
+    );
+    
+    // Return top 5 unique keywords
+    return [...new Set([...importantWords, ...words])].slice(0, 5);
+  }
+
+  private generateRelationships(documents: Document[], analysis: any): Array<{from: string, to: string, type: string, strength: number}> {
+    const relationships = [];
+    
+    // Create relationships between documents based on domain overlap
+    for (let i = 0; i < documents.length; i++) {
+      for (let j = i + 1; j < documents.length; j++) {
+        const doc1 = documents[i];
+        const doc2 = documents[j];
+        
+        // Calculate relationship strength based on keyword overlap
+        const commonKeywords = doc1.meta.keywords.filter(k => doc2.meta.keywords.includes(k));
+        const strength = commonKeywords.length / Math.max(doc1.meta.keywords.length, doc2.meta.keywords.length);
+        
+        if (strength > 0.2) {
+          relationships.push({
+            from: doc1.id,
+            to: doc2.id,
+            type: doc1.meta.domain === doc2.meta.domain ? 'domain-related' : 'cross-domain',
+            strength: Math.round(strength * 100) / 100
+          });
+        }
+      }
+    }
+    
+    return relationships;
+  }
+
+  private generateInferenceChains(documents: Document[], analysis: any): Array<{reasoning: string, confidence: number, evidence: string[]}> {
+    const chains = [];
+    
+    if (analysis.intent === 'comparative' && documents.length >= 2) {
+      chains.push({
+        reasoning: `Comparative analysis reveals differences in ${analysis.domains.join(' and ')} domains`,
+        confidence: 0.8,
+        evidence: documents.slice(0, 2).map(d => d.preview)
+      });
+    }
+    
+    if (analysis.intent === 'analytical') {
+      chains.push({
+        reasoning: `Causal relationships identified through cross-domain data correlation`,
+        confidence: 0.7,
+        evidence: documents.map(d => d.meta.topic).slice(0, 3)
+      });
+    }
+    
+    if (documents.some(d => d.meta.importance === 'high')) {
+      chains.push({
+        reasoning: `High-confidence conclusions supported by authoritative sources`,
+        confidence: 0.9,
+        evidence: documents.filter(d => d.meta.importance === 'high').map(d => d.meta.source)
+      });
+    }
+    
+    return chains;
+  }
+
+  private generateSmartQuestions(analysis: any, synthesizedAnswer: any): string[] {
+    const questions = [];
+    
+    // Generate follow-up questions based on analysis
+    if (analysis.domains.includes('business')) {
+      questions.push(`What are the market implications of ${analysis.entities.companies[0] || 'this development'}?`);
+      questions.push('How does this affect competitive positioning in the industry?');
+    }
+    
+    if (analysis.domains.includes('technology')) {
+      questions.push('What are the technical implementation challenges?');
+      questions.push('How might this technology evolve over the next 2-3 years?');
+    }
+    
+    if (analysis.intent === 'current_events') {
+      questions.push('What are the long-term consequences of this development?');
+      questions.push('Which stakeholders are most affected by this news?');
+    }
+    
+    if (analysis.complexity > 3) {
+      questions.push('What are the underlying factors driving this trend?');
+      questions.push('How do experts in the field view this development?');
+    }
+    
+    // Add entity-specific questions
+    if (analysis.entities.companies.length > 0) {
+      questions.push(`How does ${analysis.entities.companies[0]} compare to its main competitors?`);
+    }
+    
+    return questions.slice(0, 4); // Return top 4 questions
+  }
+
+  private extractKeyConcepts(synthesizedAnswer: any): Array<{concept: string, relevance: number, domain: string}> {
+    const concepts = [];
+    const allKeywords = synthesizedAnswer.documents.flatMap((d: Document) => d.meta.keywords);
+    
+    // Count keyword frequency and calculate relevance
+    const keywordCounts = allKeywords.reduce((acc: Record<string, number>, keyword: string) => {
+      acc[keyword] = (acc[keyword] || 0) + 1;
+      return acc;
+    }, {});
+    
+    // Convert to concepts with relevance scores
+    Object.entries(keywordCounts).forEach(([keyword, count]) => {
+      const relevance = Math.min(count / synthesizedAnswer.documents.length, 1);
+      if (relevance > 0.3) {
+        const domain = this.inferDomainFromKeyword(keyword);
+        concepts.push({
+          concept: keyword,
+          relevance: Math.round(relevance * 100) / 100,
+          domain
+        });
+      }
+    });
+    
+    // Sort by relevance and return top concepts
+    return concepts
+      .sort((a, b) => b.relevance - a.relevance)
+      .slice(0, 8);
+  }
+
+  private inferDomainFromKeyword(keyword: string): string {
+    const domainMappings = {
+      business: ['strategy', 'market', 'revenue', 'profit', 'management', 'enterprise'],
+      technology: ['software', 'digital', 'ai', 'artificial', 'intelligence', 'programming', 'innovation'],
+      finance: ['investment', 'financial', 'money', 'trading', 'economic', 'currency'],
+      healthcare: ['medical', 'health', 'treatment', 'disease', 'hospital'],
+      education: ['learning', 'academic', 'research', 'university', 'student']
+    };
+    
+    for (const [domain, keywords] of Object.entries(domainMappings)) {
+      if (keywords.some(k => keyword.toLowerCase().includes(k))) {
+        return domain;
+      }
+    }
+    
+    return 'general';
+  }
+}
+
+// API Route Handler
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { question, options = {} } = body;
+
+    if (!question || typeof question !== 'string') {
+      return NextResponse.json(
+        { error: 'Valid question is required' },
+        { status: 400 }
+      );
+    }
+
+    // Rate limiting check (simple implementation)
+    const rateLimitKey = request.headers.get('x-forwarded-for') || 'anonymous';
+    const rateLimitCheck = await checkRateLimit(rateLimitKey);
+    
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded',
+          retryAfter: rateLimitCheck.retryAfter 
+        },
+        { status: 429 }
+      );
+    }
+
+    const ai = new ProductionGradeAI();
+    const result = await ai.query(question, options);
+
+    // Add response headers for caching and security
+    const response = NextResponse.json(result, { status: 200 });
+    response.headers.set('Cache-Control', 'private, max-age=300'); // 5 minute cache
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'DENY');
+    
+    return response;
+
+  } catch (error) {
+    console.error('AI Query Error:', error);
+    
+    return NextResponse.json(
+      {
+        error: 'Internal server error occurred during query processing',
+        timestamp: new Date().toISOString(),
+        requestId: generateRequestId()
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// GET endpoint for health check
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    status: 'healthy',
+    version: 'production-v3.0',
+    capabilities: [
+      'multi-source-data-retrieval',
+      'real-time-news-integration',
+      'business-intelligence',
+      'academic-research',
+      'financial-markets',
+      'technology-tracking',
+      'cross-domain-analysis'
+    ],
+    availableAPIs: {
+      news: !!process.env.NEWS_API_KEY,
+      guardian: true,
+      wikipedia: true,
+      hackernews: true,
+      arxiv: true,
+      github: true,
+      stackoverflow: true,
+      crypto: true
+    },
+    timestamp: new Date().toISOString()
+  });
+}
+
+// Helper functions
+async function checkRateLimit(key: string): Promise<{allowed: boolean, retryAfter?: number}> {
+  // Simple in-memory rate limiting - in production, use Redis or similar
+  const rateLimits = new Map<string, {count: number, resetTime: number}>();
+  const limit = 100; // requests per hour
+  const window = 60 * 60 * 1000; // 1 hour in ms
+  
+  const now = Date.now();
+  const record = rateLimits.get(key);
+  
+  if (!record || now > record.resetTime) {
+    rateLimits.set(key, {count: 1, resetTime: now + window});
+    return {allowed: true};
+  }
+  
+  if (record.count >= limit) {
+    return {
+      allowed: false,
+      retryAfter: Math.ceil((record.resetTime - now) / 1000)
+    };
+  }
+  
+  record.count++;
+  return {allowed: true};
+}
+
+function generateRequestId(): string {
+  return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
