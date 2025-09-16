@@ -1,56 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { HfInference } from "@huggingface/inference";
-import pdf from "pdf-parse";
-import axios from "axios";
-import * as cheerio from "cheerio";
 
-const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
-const hf = new HfInference(process.env.HF_TOKEN);
+// Supabase client (use environment variables in Vercel)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+  process.env.SUPABASE_SERVICE_ROLE_KEY as string
+);
 
-async function embedText(text: string) {
-  const embedding = await hf.featureExtraction({
-    model: "sentence-transformers/all-MiniLM-L6-v2",
-    inputs: text
-  });
-  return embedding;
+export async function POST(request: NextRequest) {
+  try {
+    const { id, title, content, metadata } = await request.json();
+
+    if (!title || !content) {
+      return NextResponse.json(
+        { error: "Title and content are required" },
+        { status: 400 }
+      );
+    }
+
+    // Insert into Supabase
+    const { error } = await supabase.from("documents").insert([
+      {
+        id,
+        title,
+        content,
+        metadata: metadata || {},
+      },
+    ]);
+
+    if (error) {
+      console.error("Supabase insert error:", error.message);
+      return NextResponse.json(
+        { error: "Database insert failed" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      message: `Document '${title}' ingested successfully`,
+      result: {
+        ok: true,
+        id,
+        title,
+        contentLength: content.length,
+        metadata: metadata || {},
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    console.error("Ingest API error:", error);
+    return NextResponse.json(
+      { error: "Internal server error during ingestion" },
+      { status: 500 }
+    );
+  }
 }
 
+// Health check
 export async function GET() {
-  try {
-    // Example: Scrape African Union treaties page
-    const res = await axios.get("https://au.int/en/treaties");
-    const $ = cheerio.load(res.data);
-
-    const docs: any[] = [];
-    $("a").each((_, el) => {
-      const title = $(el).text().trim();
-      const url = $(el).attr("href");
-      if (url?.endsWith(".pdf")) {
-        docs.push({ title, url });
-      }
-    });
-
-    const results: any[] = [];
-    for (const doc of docs.slice(0, 3)) { // limit for demo
-      const file = await axios.get(doc.url, { responseType: "arraybuffer" });
-      const pdfText = await pdf(Buffer.from(file.data));
-
-      const embedding = await embedText(pdfText.text.slice(0, 1000));
-
-      await supabase.from("documents").insert({
-        title: doc.title,
-        content: pdfText.text,
-        metadata: { source: "African Union", url: doc.url },
-        embedding
-      });
-
-      results.push(doc.title);
-    }
-
-    return NextResponse.json({ message: "Docs ingested", count: results.length, results });
-  } catch (err) {
-    console.error("Ingest error:", err);
-    return NextResponse.json({ error: "Ingestion failed" }, { status: 500 });
+  return NextResponse.json({
+    status: "healthy",
+    service: "anaase-ingest-api",
+    timestamp: new Date().toISOString(),
+    version: "1.0.0",
+  });
   }
-    }
